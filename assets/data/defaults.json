@@ -1,0 +1,1453 @@
+{
+  "format": 2,
+  "source_executable_sha256": "fe73024c250026a521299879c00127dd726c53011255f0db36c93bb0990f5991",
+  "data_segment": 17,
+  "configuration_table": {
+    "offset": 8558,
+    "bytes": 408,
+    "descriptor_size": 8,
+    "layout": [
+      "destination_offset",
+      "name_offset",
+      "count_or_S",
+      "default_offset"
+    ],
+    "entries": [
+      {
+        "name": "LeftBoxs",
+        "group": "global_settings",
+        "descriptor_offset": 8558,
+        "name_offset": 7262,
+        "value_type": "string",
+        "value_count": null,
+        "default_offset": 7271,
+        "raw_default": "ABCDEFGHIJKL",
+        "value": "ABCDEFGHIJKL",
+        "destination_offset": 27940,
+        "script_record_overlap": null
+      },
+      {
+        "name": "RightBoxs",
+        "group": "global_settings",
+        "descriptor_offset": 8566,
+        "name_offset": 7284,
+        "value_type": "string",
+        "value_count": null,
+        "default_offset": 7294,
+        "raw_default": "ABCDEFGHIJKL",
+        "value": "ABCDEFGHIJKL",
+        "destination_offset": 27961,
+        "script_record_overlap": null
+      },
+      {
+        "name": "roach",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8574,
+        "name_offset": 7307,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7313,
+        "raw_default": "8 120 2 3 0 0 8 40 75 100 4 5",
+        "value": [
+          8,
+          120,
+          2,
+          3,
+          0,
+          0,
+          8,
+          40,
+          75,
+          100,
+          4,
+          5
+        ],
+        "destination_offset": 10884,
+        "script_record_overlap": {
+          "record_index": 15,
+          "record_name": "roach",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "bomby",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8582,
+        "name_offset": 7343,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7349,
+        "raw_default": "78 45 0 25 83 0 4 55 60 100 0 -4",
+        "value": [
+          78,
+          45,
+          0,
+          25,
+          83,
+          0,
+          4,
+          55,
+          60,
+          100,
+          0,
+          -4
+        ],
+        "destination_offset": 11006,
+        "script_record_overlap": {
+          "record_index": 16,
+          "record_name": "bomby",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "cluck",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8590,
+        "name_offset": 7382,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7388,
+        "raw_default": "250 40 2 18 80 28 15 60 75 120 5 27",
+        "value": [
+          250,
+          40,
+          2,
+          18,
+          80,
+          28,
+          15,
+          60,
+          75,
+          120,
+          5,
+          27
+        ],
+        "destination_offset": 11128,
+        "script_record_overlap": {
+          "record_index": 17,
+          "record_name": "cluck",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "zappa",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8598,
+        "name_offset": 7424,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7430,
+        "raw_default": "40 26 1 11 150 0 22 50 70 90 4 4",
+        "value": [
+          40,
+          26,
+          1,
+          11,
+          150,
+          0,
+          22,
+          50,
+          70,
+          90,
+          4,
+          4
+        ],
+        "destination_offset": 11250,
+        "script_record_overlap": {
+          "record_index": 18,
+          "record_name": "zappa",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "kanga",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8606,
+        "name_offset": 7463,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7469,
+        "raw_default": "35 30 1 9 70 0 15 19 60 68 2 20",
+        "value": [
+          35,
+          30,
+          1,
+          9,
+          70,
+          0,
+          15,
+          19,
+          60,
+          68,
+          2,
+          20
+        ],
+        "destination_offset": 11372,
+        "script_record_overlap": {
+          "record_index": 19,
+          "record_name": "kanga",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "bigal",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8614,
+        "name_offset": 7501,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7507,
+        "raw_default": "500 9 0 9 0 0 0 40 75 80 -32 -5",
+        "value": [
+          500,
+          9,
+          0,
+          9,
+          0,
+          0,
+          0,
+          40,
+          75,
+          80,
+          -32,
+          -5
+        ],
+        "destination_offset": 11494,
+        "script_record_overlap": {
+          "record_index": 20,
+          "record_name": "bigal",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "destr",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8622,
+        "name_offset": 7539,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7545,
+        "raw_default": "240 9 0 10 120 0 12 40 70 82 0 -13",
+        "value": [
+          240,
+          9,
+          0,
+          10,
+          120,
+          0,
+          12,
+          40,
+          70,
+          82,
+          0,
+          -13
+        ],
+        "destination_offset": 11616,
+        "script_record_overlap": {
+          "record_index": 21,
+          "record_name": "destr",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "stick",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8630,
+        "name_offset": 7580,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7586,
+        "raw_default": "80 27 0 9 50 0 27 40 76 80 -2 -5",
+        "value": [
+          80,
+          27,
+          0,
+          9,
+          50,
+          0,
+          27,
+          40,
+          76,
+          80,
+          -2,
+          -5
+        ],
+        "destination_offset": 11738,
+        "script_record_overlap": {
+          "record_index": 22,
+          "record_name": "stick",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "goril",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8638,
+        "name_offset": 7619,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7625,
+        "raw_default": "210 8 0 8 40 92 8 80 60 120 -5 25",
+        "value": [
+          210,
+          8,
+          0,
+          8,
+          40,
+          92,
+          8,
+          80,
+          60,
+          120,
+          -5,
+          25
+        ],
+        "destination_offset": 11860,
+        "script_record_overlap": {
+          "record_index": 23,
+          "record_name": "goril",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "skull",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8646,
+        "name_offset": 7659,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7665,
+        "raw_default": "30 10 2 12 0 0 0 60 60 100 0 0",
+        "value": [
+          30,
+          10,
+          2,
+          12,
+          0,
+          0,
+          0,
+          60,
+          60,
+          100,
+          0,
+          0
+        ],
+        "destination_offset": 11982,
+        "script_record_overlap": {
+          "record_index": 24,
+          "record_name": "skull",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "magnt",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8654,
+        "name_offset": 7696,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7702,
+        "raw_default": "8 50 0 18 0 0 0 60 60 100 18 30",
+        "value": [
+          8,
+          50,
+          0,
+          18,
+          0,
+          0,
+          0,
+          60,
+          60,
+          100,
+          18,
+          30
+        ],
+        "destination_offset": 12104,
+        "script_record_overlap": {
+          "record_index": 25,
+          "record_name": "magnt",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "handy",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8662,
+        "name_offset": 7734,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7740,
+        "raw_default": "10 70 0 6 120 0 7 40 68 90 0 0",
+        "value": [
+          10,
+          70,
+          0,
+          6,
+          120,
+          0,
+          7,
+          40,
+          68,
+          90,
+          0,
+          0
+        ],
+        "destination_offset": 12226,
+        "script_record_overlap": {
+          "record_index": 26,
+          "record_name": "handy",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "small",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8670,
+        "name_offset": 7771,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7777,
+        "raw_default": "9 40 2 20 25 0 0 70 60 130 13 8",
+        "value": [
+          9,
+          40,
+          2,
+          20,
+          25,
+          0,
+          0,
+          70,
+          60,
+          130,
+          13,
+          8
+        ],
+        "destination_offset": 12348,
+        "script_record_overlap": {
+          "record_index": 27,
+          "record_name": "small",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "roket",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8678,
+        "name_offset": 7809,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7815,
+        "raw_default": "900 200 0 60 0 0 5 10 80 90 0 0",
+        "value": [
+          900,
+          200,
+          0,
+          60,
+          0,
+          0,
+          5,
+          10,
+          80,
+          90,
+          0,
+          0
+        ],
+        "destination_offset": 12470,
+        "script_record_overlap": {
+          "record_index": 28,
+          "record_name": "roket",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "buggy",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8686,
+        "name_offset": 7847,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7853,
+        "raw_default": "30 20 2 1000 0 0 20 50 50 100 0 0",
+        "value": [
+          30,
+          20,
+          2,
+          1000,
+          0,
+          0,
+          20,
+          50,
+          50,
+          100,
+          0,
+          0
+        ],
+        "destination_offset": 12592,
+        "script_record_overlap": {
+          "record_index": 29,
+          "record_name": "buggy",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "block",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8694,
+        "name_offset": 7887,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7893,
+        "raw_default": "500 0 4 10 0 0 10 10 90 90 0 0",
+        "value": [
+          500,
+          0,
+          4,
+          10,
+          0,
+          0,
+          10,
+          10,
+          90,
+          90,
+          0,
+          0
+        ],
+        "destination_offset": 12714,
+        "script_record_overlap": {
+          "record_index": 30,
+          "record_name": "block",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "wall1",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8702,
+        "name_offset": 7924,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7930,
+        "raw_default": "8 0 4 10 0 50 30 8 70 97 0 0",
+        "value": [
+          8,
+          0,
+          4,
+          10,
+          0,
+          50,
+          30,
+          8,
+          70,
+          97,
+          0,
+          0
+        ],
+        "destination_offset": 12836,
+        "script_record_overlap": {
+          "record_index": 31,
+          "record_name": "wall1",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "wall2",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8710,
+        "name_offset": 7959,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 7965,
+        "raw_default": "8 0 4 10 0 50 28 10 70 97 0 0",
+        "value": [
+          8,
+          0,
+          4,
+          10,
+          0,
+          50,
+          28,
+          10,
+          70,
+          97,
+          0,
+          0
+        ],
+        "destination_offset": 12958,
+        "script_record_overlap": {
+          "record_index": 32,
+          "record_name": "wall2",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "wall3",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8718,
+        "name_offset": 7995,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 8001,
+        "raw_default": "8 0 4 10 0 50 25 9 72 97 0 0",
+        "value": [
+          8,
+          0,
+          4,
+          10,
+          0,
+          50,
+          25,
+          9,
+          72,
+          97,
+          0,
+          0
+        ],
+        "destination_offset": 13080,
+        "script_record_overlap": {
+          "record_index": 33,
+          "record_name": "wall3",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "wall4",
+        "group": "toy_and_obstacle_parameters",
+        "descriptor_offset": 8726,
+        "name_offset": 8030,
+        "value_type": "integers",
+        "value_count": 12,
+        "default_offset": 8036,
+        "raw_default": "8 0 4 10 0 50 27 9 70 66 0 0",
+        "value": [
+          8,
+          0,
+          4,
+          10,
+          0,
+          50,
+          27,
+          9,
+          70,
+          66,
+          0,
+          0
+        ],
+        "destination_offset": 13202,
+        "script_record_overlap": {
+          "record_index": 34,
+          "record_name": "wall4",
+          "record_relative_offset": 10
+        }
+      },
+      {
+        "name": "hole",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8734,
+        "name_offset": 8065,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8070,
+        "raw_default": "0 50 10 10 90 90",
+        "value": [
+          0,
+          50,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 10404,
+        "script_record_overlap": {
+          "record_index": 11,
+          "record_name": "mudd",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "puup",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8742,
+        "name_offset": 8087,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8092,
+        "raw_default": "0 0 0 0 100 100",
+        "value": [
+          0,
+          0,
+          0,
+          0,
+          100,
+          100
+        ],
+        "destination_offset": 9672,
+        "script_record_overlap": {
+          "record_index": 5,
+          "record_name": "puup",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "rock",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8750,
+        "name_offset": 8108,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8113,
+        "raw_default": "0 0 10 10 90 90",
+        "value": [
+          0,
+          0,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 10770,
+        "script_record_overlap": {
+          "record_index": 14,
+          "record_name": "rock",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "glue",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8758,
+        "name_offset": 8129,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8134,
+        "raw_default": "0 50 10 10 90 90",
+        "value": [
+          0,
+          50,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 10648,
+        "script_record_overlap": {
+          "record_index": 13,
+          "record_name": "glue",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "oily",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8766,
+        "name_offset": 8151,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8156,
+        "raw_default": "0 20 0 10 90 90",
+        "value": [
+          0,
+          20,
+          0,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 10526,
+        "script_record_overlap": {
+          "record_index": 12,
+          "record_name": "oily",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "tele",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8774,
+        "name_offset": 8172,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8177,
+        "raw_default": "0 0 10 25 40 75",
+        "value": [
+          0,
+          0,
+          10,
+          25,
+          40,
+          75
+        ],
+        "destination_offset": 10282,
+        "script_record_overlap": {
+          "record_index": 10,
+          "record_name": "tele",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "crak",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8782,
+        "name_offset": 8193,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8198,
+        "raw_default": "0 100 45 70 60 120",
+        "value": [
+          0,
+          100,
+          45,
+          70,
+          60,
+          120
+        ],
+        "destination_offset": 10160,
+        "script_record_overlap": {
+          "record_index": 9,
+          "record_name": "crak",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "dtrd",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8790,
+        "name_offset": 8217,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8222,
+        "raw_default": "0 300 10 10 90 90",
+        "value": [
+          0,
+          300,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 9794,
+        "script_record_overlap": {
+          "record_index": 6,
+          "record_name": "dtrd",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "utrd",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8798,
+        "name_offset": 8240,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8245,
+        "raw_default": "0 300 10 10 90 90",
+        "value": [
+          0,
+          300,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 9916,
+        "script_record_overlap": {
+          "record_index": 7,
+          "record_name": "utrd",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "htrd",
+        "group": "board_object_parameters",
+        "descriptor_offset": 8806,
+        "name_offset": 8263,
+        "value_type": "integers",
+        "value_count": 6,
+        "default_offset": 8268,
+        "raw_default": "0 135 10 10 90 90",
+        "value": [
+          0,
+          135,
+          10,
+          10,
+          90,
+          90
+        ],
+        "destination_offset": 10038,
+        "script_record_overlap": {
+          "record_index": 8,
+          "record_name": "htrd",
+          "record_relative_offset": 18
+        }
+      },
+      {
+        "name": "Erratic",
+        "group": "global_settings",
+        "descriptor_offset": 8814,
+        "name_offset": 8286,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8294,
+        "raw_default": "10",
+        "value": [
+          10
+        ],
+        "destination_offset": 28702,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Curved",
+        "group": "global_settings",
+        "descriptor_offset": 8822,
+        "name_offset": 8297,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8304,
+        "raw_default": "12",
+        "value": [
+          12
+        ],
+        "destination_offset": 26580,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Taketurns",
+        "group": "global_settings",
+        "descriptor_offset": 8830,
+        "name_offset": 8307,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8317,
+        "raw_default": "0",
+        "value": [
+          0
+        ],
+        "destination_offset": 25120,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Maxtoys",
+        "group": "global_settings",
+        "descriptor_offset": 8838,
+        "name_offset": 8319,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8327,
+        "raw_default": "59",
+        "value": [
+          59
+        ],
+        "destination_offset": 26460,
+        "script_record_overlap": null
+      },
+      {
+        "name": "GaugeTime",
+        "group": "global_settings",
+        "descriptor_offset": 8846,
+        "name_offset": 8330,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8340,
+        "raw_default": "6000",
+        "value": [
+          6000
+        ],
+        "destination_offset": 28662,
+        "script_record_overlap": null
+      },
+      {
+        "name": "DecayTime",
+        "group": "global_settings",
+        "descriptor_offset": 8854,
+        "name_offset": 8345,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8355,
+        "raw_default": "1200",
+        "value": [
+          1200
+        ],
+        "destination_offset": 26510,
+        "script_record_overlap": null
+      },
+      {
+        "name": "SlowingTime",
+        "group": "global_settings",
+        "descriptor_offset": 8862,
+        "name_offset": 8360,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8372,
+        "raw_default": "800",
+        "value": [
+          800
+        ],
+        "destination_offset": 26284,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Resetimeonpick",
+        "group": "global_settings",
+        "descriptor_offset": 8870,
+        "name_offset": 8376,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8391,
+        "raw_default": "1",
+        "value": [
+          1
+        ],
+        "destination_offset": 28698,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Winningscore",
+        "group": "global_settings",
+        "descriptor_offset": 8878,
+        "name_offset": 8393,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8406,
+        "raw_default": "21",
+        "value": [
+          21
+        ],
+        "destination_offset": 28664,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Level",
+        "group": "global_settings",
+        "descriptor_offset": 8886,
+        "name_offset": 8409,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8415,
+        "raw_default": "1",
+        "value": [
+          1
+        ],
+        "destination_offset": 25074,
+        "script_record_overlap": null
+      },
+      {
+        "name": "BlockLaunch",
+        "group": "global_settings",
+        "descriptor_offset": 8894,
+        "name_offset": 8417,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8429,
+        "raw_default": "0",
+        "value": [
+          0
+        ],
+        "destination_offset": 28018,
+        "script_record_overlap": null
+      },
+      {
+        "name": "FrameStep",
+        "group": "global_settings",
+        "descriptor_offset": 8902,
+        "name_offset": 8431,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8441,
+        "raw_default": "55",
+        "value": [
+          55
+        ],
+        "destination_offset": 27742,
+        "script_record_overlap": null
+      },
+      {
+        "name": "MaxFrameStep",
+        "group": "global_settings",
+        "descriptor_offset": 8910,
+        "name_offset": 8444,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8457,
+        "raw_default": "550",
+        "value": [
+          550
+        ],
+        "destination_offset": 28700,
+        "script_record_overlap": null
+      },
+      {
+        "name": "CritterOnArrow",
+        "group": "global_settings",
+        "descriptor_offset": 8918,
+        "name_offset": 8461,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8476,
+        "raw_default": "0",
+        "value": [
+          0
+        ],
+        "destination_offset": 28714,
+        "script_record_overlap": null
+      },
+      {
+        "name": "WindingOnArrow",
+        "group": "global_settings",
+        "descriptor_offset": 8926,
+        "name_offset": 8478,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8493,
+        "raw_default": "0",
+        "value": [
+          0
+        ],
+        "destination_offset": 26270,
+        "script_record_overlap": null
+      },
+      {
+        "name": "WrapArrow",
+        "group": "global_settings",
+        "descriptor_offset": 8934,
+        "name_offset": 8495,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8505,
+        "raw_default": "0",
+        "value": [
+          0
+        ],
+        "destination_offset": 26946,
+        "script_record_overlap": null
+      },
+      {
+        "name": "SuddenDeath",
+        "group": "global_settings",
+        "descriptor_offset": 8942,
+        "name_offset": 8507,
+        "value_type": "integers",
+        "value_count": 1,
+        "default_offset": 8519,
+        "raw_default": "300",
+        "value": [
+          300
+        ],
+        "destination_offset": 26842,
+        "script_record_overlap": null
+      },
+      {
+        "name": "Anim",
+        "group": "global_settings",
+        "descriptor_offset": 8950,
+        "name_offset": 8523,
+        "value_type": "string",
+        "value_count": null,
+        "default_offset": 8528,
+        "raw_default": "anim.dat",
+        "value": "anim.dat",
+        "destination_offset": 26896,
+        "script_record_overlap": null
+      },
+      {
+        "name": "LeftShiftCtrl",
+        "group": "global_settings",
+        "descriptor_offset": 8958,
+        "name_offset": 8537,
+        "value_type": "integers",
+        "value_count": 2,
+        "default_offset": 8551,
+        "raw_default": "42 29",
+        "value": [
+          42,
+          29
+        ],
+        "destination_offset": 26464,
+        "script_record_overlap": null
+      }
+    ]
+  },
+  "twelve_word_parameter_layout": [
+    {
+      "index": 0,
+      "name": "mass",
+      "evidence": "segment 6:3147 and segment 10 object logic"
+    },
+    {
+      "index": 1,
+      "name": "horizontal_speed",
+      "evidence": "segment 10:18fb-1911"
+    },
+    {
+      "index": 2,
+      "name": "movement_mode",
+      "evidence": "segment 10:1921-197d"
+    },
+    {
+      "index": 3,
+      "name": "vim_decay",
+      "evidence": "GEARCON labels Vim; segment 10:2668-2673 subtracts it from winding"
+    },
+    {
+      "index": 4,
+      "name": "primary_extra",
+      "evidence": "GEARCON labels Extra and toy-specific controls; segment 10 special callbacks"
+    },
+    {
+      "index": 5,
+      "name": "secondary_extra",
+      "evidence": "GEARCON toy-specific controls; segment 10 special callbacks"
+    },
+    {
+      "index": 6,
+      "name": "collision_front_percent",
+      "evidence": "RECTCON Collision Box Size dialog, control Front"
+    },
+    {
+      "index": 7,
+      "name": "collision_top_percent",
+      "evidence": "RECTCON Collision Box Size dialog, control Top"
+    },
+    {
+      "index": 8,
+      "name": "collision_back_percent",
+      "evidence": "RECTCON Collision Box Size dialog, control Back"
+    },
+    {
+      "index": 9,
+      "name": "collision_bottom_percent",
+      "evidence": "RECTCON Collision Box Size dialog, control Bottom"
+    },
+    {
+      "index": 10,
+      "name": "handy_attach_x",
+      "evidence": "RECTCON X Handy Y controls and segment 10:0ec6-0f53"
+    },
+    {
+      "index": 11,
+      "name": "handy_attach_y",
+      "evidence": "RECTCON X Handy Y controls and segment 10:0ec6-0f53"
+    }
+  ],
+  "script_type_records": {
+    "offset": 9044,
+    "stride": 122,
+    "count": 36,
+    "records": [
+      {
+        "index": 0,
+        "offset": 9044,
+        "id": 0,
+        "name": "art"
+      },
+      {
+        "index": 1,
+        "offset": 9166,
+        "id": 1,
+        "name": "arrow"
+      },
+      {
+        "index": 2,
+        "offset": 9288,
+        "id": 2,
+        "name": "boxer"
+      },
+      {
+        "index": 3,
+        "offset": 9410,
+        "id": 3,
+        "name": "gauge"
+      },
+      {
+        "index": 4,
+        "offset": 9532,
+        "id": 4,
+        "name": "digit"
+      },
+      {
+        "index": 5,
+        "offset": 9654,
+        "id": 5,
+        "name": "puup"
+      },
+      {
+        "index": 6,
+        "offset": 9776,
+        "id": 6,
+        "name": "dtrd"
+      },
+      {
+        "index": 7,
+        "offset": 9898,
+        "id": 7,
+        "name": "utrd"
+      },
+      {
+        "index": 8,
+        "offset": 10020,
+        "id": 8,
+        "name": "htrd"
+      },
+      {
+        "index": 9,
+        "offset": 10142,
+        "id": 9,
+        "name": "crak"
+      },
+      {
+        "index": 10,
+        "offset": 10264,
+        "id": 10,
+        "name": "tele"
+      },
+      {
+        "index": 11,
+        "offset": 10386,
+        "id": 11,
+        "name": "mudd"
+      },
+      {
+        "index": 12,
+        "offset": 10508,
+        "id": 12,
+        "name": "oily"
+      },
+      {
+        "index": 13,
+        "offset": 10630,
+        "id": 13,
+        "name": "glue"
+      },
+      {
+        "index": 14,
+        "offset": 10752,
+        "id": 14,
+        "name": "rock"
+      },
+      {
+        "index": 15,
+        "offset": 10874,
+        "id": 15,
+        "name": "roach"
+      },
+      {
+        "index": 16,
+        "offset": 10996,
+        "id": 16,
+        "name": "bomby"
+      },
+      {
+        "index": 17,
+        "offset": 11118,
+        "id": 17,
+        "name": "cluck"
+      },
+      {
+        "index": 18,
+        "offset": 11240,
+        "id": 18,
+        "name": "zappa"
+      },
+      {
+        "index": 19,
+        "offset": 11362,
+        "id": 19,
+        "name": "kanga"
+      },
+      {
+        "index": 20,
+        "offset": 11484,
+        "id": 20,
+        "name": "bigal"
+      },
+      {
+        "index": 21,
+        "offset": 11606,
+        "id": 21,
+        "name": "destr"
+      },
+      {
+        "index": 22,
+        "offset": 11728,
+        "id": 22,
+        "name": "stick"
+      },
+      {
+        "index": 23,
+        "offset": 11850,
+        "id": 23,
+        "name": "goril"
+      },
+      {
+        "index": 24,
+        "offset": 11972,
+        "id": 24,
+        "name": "skull"
+      },
+      {
+        "index": 25,
+        "offset": 12094,
+        "id": 25,
+        "name": "magnt"
+      },
+      {
+        "index": 26,
+        "offset": 12216,
+        "id": 26,
+        "name": "handy"
+      },
+      {
+        "index": 27,
+        "offset": 12338,
+        "id": 27,
+        "name": "small"
+      },
+      {
+        "index": 28,
+        "offset": 12460,
+        "id": 28,
+        "name": "roket"
+      },
+      {
+        "index": 29,
+        "offset": 12582,
+        "id": 29,
+        "name": "buggy"
+      },
+      {
+        "index": 30,
+        "offset": 12704,
+        "id": 30,
+        "name": "block"
+      },
+      {
+        "index": 31,
+        "offset": 12826,
+        "id": 31,
+        "name": "wall1"
+      },
+      {
+        "index": 32,
+        "offset": 12948,
+        "id": 32,
+        "name": "wall2"
+      },
+      {
+        "index": 33,
+        "offset": 13070,
+        "id": 33,
+        "name": "wall3"
+      },
+      {
+        "index": 34,
+        "offset": 13192,
+        "id": 34,
+        "name": "wall4"
+      },
+      {
+        "index": 35,
+        "offset": 13314,
+        "id": 0,
+        "name": ""
+      }
+    ]
+  }
+}

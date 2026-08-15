@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Converted runtime data is digest-verified and must remain byte-for-byte exact.
+assets/** binary
+
+*.png binary
+*.wav binary
+*.mid binary
+*.ttf binary

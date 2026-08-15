@@ -1,0 +1,21 @@
+# Original preservation media and raw extractions are local working inputs.
+/preservation/
+
+# Generated reverse-engineering output.
+/analysis/generated/
+/build/
+/dist/
+/release/
+
+# Local tooling environments.
+/.venv/
+/.cache/
+__pycache__/
+*.py[cod]
+
+# Editor and platform noise.
+.DS_Store
+Thumbs.db
+*.user
+*.suo
+*.VC.db
