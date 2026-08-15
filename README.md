@@ -1,7 +1,7 @@
-# Gearheads Native Windows Port 1.0
+# Gearheads Native Windows Port 1.0.1
 
 Gearheads Native is a preservation-oriented, native Windows reimplementation
-of the 1996 toy-battle game. Version 1.0 runs without the original CD, disk
+of the 1996 toy-battle game. Version 1.0.1 runs without the original CD, disk
 image, installer, executable, DLLs, or separately supplied game assets.
 
 The release is a single 64-bit `Gearheads.exe`. Its verified converted runtime
@@ -13,13 +13,17 @@ recreated from the EXE. Champion-table updates are stored separately under
 
 ## Download and run
 
-1. Extract the v1.0 release ZIP, or copy `Gearheads.exe` by itself.
+1. Extract the v1.0.1 release ZIP, or copy `Gearheads.exe` by itself.
 2. Run `Gearheads.exe`. No installation or compatibility mode is required.
 3. If Windows SmartScreen warns about the unsigned executable, inspect its
    SHA-256 value against `SHA256SUMS.txt` before choosing to run it.
 
 The supported release target is 64-bit Windows 10 or Windows 11. MIDI playback
-uses Windows' installed MIDI mapper, so its sound can vary by system.
+uses Windows' installed MIDI mapper, so its sound can vary by system. Sound
+effects use the Windows DirectSound mixer and can overlap instead of cutting
+one another off. Audio initialization and device errors are recorded in
+`%LOCALAPPDATA%\Gearheads Native\audio.log`; an unavailable audio device does
+not prevent the game from running.
 
 ## Controls
 
@@ -31,8 +35,10 @@ uses Windows' installed MIDI mapper, so its sound can vary by system.
 - Escape leaves a duel. Any key leaves an attract-mode demonstration.
 - Alt+Enter toggles borderless fullscreen. The original 4:3 picture is scaled
   with black letterboxing rather than distorted.
+- F9 toggles sound effects; F10 toggles music. Both choices are saved under
+  `%LOCALAPPDATA%\Gearheads Native`, and an on-screen notice confirms changes.
 
-## What version 1.0 preserves
+## What version 1.0.1 preserves
 
 The native engine reads all 35 recovered screen sections, 105 level sections,
 34 object scripts, 51 executable defaults, and 14 timed `ANIM.DAT`
@@ -68,13 +74,13 @@ The build creates `dist\Gearheads.exe`. `tools\build_embedded_assets.py`
 deterministically packs the converted `assets` tree into the PE resource; the
 finished EXE does not search for an adjacent asset folder.
 
-To produce the local v1.0 publication:
+To produce the local v1.0.1 package:
 
 ```powershell
 python tools\package_release.py `
   --exe dist\Gearheads.exe `
   --output release `
-  --version 1.0.0
+  --version 1.0.1
 ```
 
 ## Preservation and reverse engineering
@@ -109,9 +115,10 @@ map and behavioral findings.
 
 ## Verification
 
-The test suite validates recovered data counts, all generated asset digests,
-XR palette and scanline conversion, embedded-pack extraction, fixed-step
-physics, match rules, dispatch tables, surfaces, powerups, dynamic obstacles,
+The test suite validates recovered data counts, every WAV and MIDI reference,
+all WAV headers and sample payloads, all generated asset digests, XR palette
+and scanline conversion, embedded-pack extraction, fixed-step physics, match
+rules, dispatch tables, surfaces, audio cue mappings, powerups, dynamic obstacles,
 tournament behavior, all 281 attract events, champion persistence, fullscreen
 switching, and the final PE import table. The import audit permits only Windows
 system libraries; MinGW does not need to be installed on the target PC.
@@ -123,7 +130,7 @@ flicker.
 ## Credits and status
 
 See [CREDITS.md](CREDITS.md) for the complete recovered original staff list and
-native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.0
+native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.0.1
 details, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for provenance and
 rights information.
 

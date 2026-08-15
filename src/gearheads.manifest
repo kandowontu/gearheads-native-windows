@@ -4,7 +4,7 @@
       name="GearheadsNative.WindowsPort"
       processorArchitecture="*"
       type="win32"
-      version="1.0.0.0" />
+      version="1.0.1.0" />
   <description>Gearheads Native Windows Port</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>

@@ -29,6 +29,7 @@ public:
         const std::wstring& section, const std::wstring& state
     ) const;
     const std::vector<AnimationFrame>& locomotion(const std::wstring& section) const;
+    std::filesystem::path sound(const std::wstring& section, int ordinal) const;
     std::size_t size() const { return sections_.size(); }
 
 private:

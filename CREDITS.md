@@ -3,8 +3,7 @@
 ## Original Gearheads staff
 
 The following names are transcribed from the original game's shipped Staff
-screen and retained in its displayed order. The screen does not assign roles,
-so this project does not invent them.
+screen and retained in its displayed order.
 
 - Ephraim Cohen
 - Daniel Reznick
@@ -25,6 +24,10 @@ so this project does not invent them.
 - Mark Voelpel
 - David Barosin
 
+The original executable's embedded credit records additionally identify:
+
+- Music and Sound Design: Michael Sweet / Elias Associates, Inc.
+
 The shipped presentation identifies Philips Media and R/GA Interactive. Their
 names and marks are acknowledged as part of the historical record; this port
 is not affiliated with or endorsed by either organization.
@@ -38,8 +41,9 @@ is not affiliated with or endorsed by either organization.
   packaging: developed in collaboration with OpenAI Codex
 
 The native implementation uses Windows GDI, Windows Imaging Component, COM,
-and Windows multimedia APIs. Its reproducible build uses CMake, Ninja, Python,
-and a C++20 Windows toolchain. No third-party runtime DLL is bundled.
+DirectSound, and Windows multimedia APIs. Its reproducible build uses CMake,
+Ninja, Python, and a C++20 Windows toolchain. No third-party runtime DLL is
+bundled.
 
 ## Preservation acknowledgement
 

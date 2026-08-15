@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the deterministic local Gearheads v1.0 release."""
+"""Create a deterministic local Gearheads release package."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 
-ZIP_TIME = (2026, 8, 14, 12, 0, 0)
+ZIP_TIME = (2026, 8, 15, 12, 0, 0)
 
 
 def sha256(path: Path) -> str:
@@ -74,7 +74,7 @@ def main() -> None:
         f"{sha256(generic_archive)}  {generic_archive.name}\n"
     )
     (args.output / "SHA256SUMS.txt").write_text(sums, encoding="ascii")
-    print(f"Published {archive_path}")
+    print(f"Created {archive_path}")
     print(f"Executable SHA-256: {exe_digest}")
 
 
