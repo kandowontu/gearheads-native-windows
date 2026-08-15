@@ -1,4 +1,4 @@
-GEARHEADS NATIVE WINDOWS PORT 1.0.0
+GEARHEADS NATIVE WINDOWS PORT 1.0.1
 ==================================
 
 This is a self-contained 64-bit Windows build. Run Gearheads.exe. You do not
@@ -26,6 +26,14 @@ Right player: Up/Down lane, Left/Right toy, Enter or Space release.
 Left player: W/S lane, A/D toy, F release.
 Escape leaves a duel. Any key leaves an attract demonstration.
 Alt+Enter toggles borderless fullscreen.
+F9 toggles sound effects. F10 toggles music. These choices are saved.
+
+Audio diagnostics
+-----------------
+If an audio device or MIDI mapper cannot be opened, the game continues without
+that audio channel and writes details to:
+
+  %LOCALAPPDATA%\Gearheads Native\audio.log
 
 Verification
 ------------

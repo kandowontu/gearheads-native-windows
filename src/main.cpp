@@ -2,6 +2,7 @@
 #include "game.hpp"
 
 #include <windows.h>
+#include <mmsystem.h>
 
 #include <chrono>
 #include <exception>
@@ -16,7 +17,7 @@ struct Runtime {
     gh::InputState input;
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
 
-    explicit Runtime(const std::filesystem::path& assets) : game(assets) {}
+    Runtime(const std::filesystem::path& assets, HWND window) : game(assets, window) {}
 };
 
 std::unique_ptr<Runtime> runtime;
@@ -79,12 +80,25 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
                 if ((lparam & (1LL << 30)) == 0) toggle_fullscreen(window);
                 return 0;
             }
+            if (runtime != nullptr && (lparam & (1LL << 30)) == 0) {
+                if (wparam == VK_F9) {
+                    runtime->game.toggle_sound_effects();
+                    return 0;
+                }
+                if (wparam == VK_F10) {
+                    runtime->game.toggle_music();
+                    return 0;
+                }
+            }
             if (runtime != nullptr && wparam < runtime->input.held.size()) {
                 if (!(lparam & (1LL << 30))) runtime->input.pressed[wparam] = true;
                 runtime->input.held[wparam] = true;
             }
             return 0;
         }
+        case MM_MCINOTIFY:
+            if (runtime != nullptr) runtime->game.handle_mci_notify(wparam, lparam);
+            return 0;
         case WM_KEYUP:
         case WM_SYSKEYUP:
             if (runtime != nullptr && wparam < runtime->input.held.size()) {
@@ -144,7 +158,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show_command) {
         HWND window = CreateWindowExW(
             0,
             window_class.lpszClassName,
-            L"Gearheads - Native Windows Port 1.0",
+            L"Gearheads - Native Windows Port 1.0.1",
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
@@ -157,7 +171,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show_command) {
         );
         if (window == nullptr) throw std::runtime_error("Window creation failed");
 
-        runtime = std::make_unique<Runtime>(gh::materialize_embedded_assets());
+        runtime = std::make_unique<Runtime>(gh::materialize_embedded_assets(), window);
         runtime->game.render(runtime->canvas);
         ShowWindow(window, show_command);
         UpdateWindow(window);

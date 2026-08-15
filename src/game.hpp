@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio.hpp"
 #include "render.hpp"
 #include "screens.hpp"
 #include "levels.hpp"
@@ -12,10 +13,13 @@
 #include "computer_ai.hpp"
 
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <random>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace gh {
@@ -64,6 +68,7 @@ struct Toy {
     std::wstring effect_animation;
     bool exploding = false;
     bool active = true;
+    std::uint64_t id = 0;
 };
 
 struct ToyBox {
@@ -102,12 +107,15 @@ struct Powerup {
 
 class Game {
 public:
-    explicit Game(std::filesystem::path asset_root);
+    Game(std::filesystem::path asset_root, HWND notification_window);
     ~Game();
 
     void update(double seconds, const InputState& input);
     void render(Canvas& canvas);
     bool wants_quit() const { return wants_quit_; }
+    void handle_mci_notify(WPARAM status, LPARAM device_id);
+    void toggle_sound_effects();
+    void toggle_music();
 
 private:
     void update_frontend(double seconds, const InputState& input);
@@ -155,9 +163,12 @@ private:
     void render_duel(Canvas& canvas);
     void play_music(const std::filesystem::path& relative_path);
     void stop_music();
-    void play_sound(const std::filesystem::path& relative_path) const;
+    void play_sound(const std::filesystem::path& relative_path);
+    void play_sound_alias(std::wstring_view alias);
+    void play_collision_sound(int relative_speed16);
 
     std::filesystem::path asset_root_;
+    AudioSystem audio_;
     DefaultsDatabase defaults_;
     ImageCache images_;
     ScreenDatabase screens_;
@@ -173,6 +184,9 @@ private:
     std::array<bool, 2> computer_controlled_{true, false};
     std::vector<ToyDefinition> definitions_;
     std::vector<Toy> toys_;
+    std::uint64_t next_toy_id_ = 1;
+    std::set<std::pair<std::uint64_t, std::uint64_t>> previous_toy_contacts_;
+    std::vector<std::pair<int, std::filesystem::path>> scheduled_sounds_;
     std::vector<DynamicObstacle> dynamic_obstacles_;
     std::optional<Powerup> powerup_;
     std::array<std::vector<int>, 2> toyboxes_;
@@ -203,6 +217,7 @@ private:
     int ai_difficulty_ = 5;
     double frontend_elapsed_ = 0.0;
     double duel_elapsed_ = 0.0;
+    double duel_countdown_seconds_ = 0.0;
     double attract_timeout_seconds_ = 60.0;
     std::wstring attract_anykey_target_ = L"main";
     std::wstring attract_timeout_target_ = L"main";
@@ -211,8 +226,10 @@ private:
     std::size_t attract_event_ = 0;
     bool scripted_attract_ = false;
     std::wstring entered_name_;
+    std::wstring audio_notice_;
+    double audio_notice_seconds_ = 0.0;
     double simulation_accumulator_ = 0.0;
-    std::mt19937 random_{0x47454152U};
+    std::mt19937 random_{std::random_device{}()};
 };
 
 }  // namespace gh

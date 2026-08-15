@@ -10,6 +10,7 @@ import subprocess
 
 
 SYSTEM_DLLS = {
+    "dsound.dll",
     "gdi32.dll",
     "kernel32.dll",
     "ole32.dll",

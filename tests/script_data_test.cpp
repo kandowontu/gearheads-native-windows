@@ -35,6 +35,15 @@ int main(int argc, char** argv) {
             require(!script->sounds.empty(), "playable toy has no sound mapping");
         }
         require(frame_count >= 40, "too few playable walking frames were recovered");
+        require(database.sound(L"boxer", 1) == "sounds/bumplite.wav", "light collision sound is missing");
+        require(database.sound(L"boxer", 2) == "sounds/bumpmed.wav", "medium collision sound is missing");
+        require(database.sound(L"boxer", 3) == "sounds/bumphvy.wav", "heavy collision sound is missing");
+        require(database.sound(L"digit", 1) == "sounds/scorel.wav", "left score sound is missing");
+        require(database.sound(L"digit", 2) == "sounds/scorer.wav", "right score sound is missing");
+        require(database.sound(L"crak", 3) == "sounds/fzp_spc3.wav", "crack phase sound is missing");
+        require(database.sound(L"arrow", 3) == "sounds/fty_spc2.wav", "teleporter exit sound is missing");
+        require(database.sound(L"puup", 1) == "sounds/power1.wav", "powerup sound is missing");
+        require(database.sound(L"puup", 2) == "sounds/power2.wav", "blocked powerup sound is missing");
         std::cout << "validated 34 script sections and " << frame_count
                   << " playable walking frames\n";
         return 0;

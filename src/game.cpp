@@ -6,7 +6,6 @@
 #include "powerups.hpp"
 #include "toy_effects.hpp"
 
-#include <mmsystem.h>
 #include <shlobj.h>
 
 #include <algorithm>
@@ -69,14 +68,13 @@ std::wstring wide_ascii(std::string_view value) {
     return std::wstring(value.begin(), value.end());
 }
 
-std::filesystem::path champion_save_path() {
+std::filesystem::path application_data_directory() {
     std::array<wchar_t, MAX_PATH> local_app_data{};
     if (SUCCEEDED(SHGetFolderPathW(
             nullptr, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, nullptr,
             SHGFP_TYPE_CURRENT, local_app_data.data()
         ))) {
-        return std::filesystem::path(local_app_data.data()) /
-               L"Gearheads Native" / L"champions.dat";
+        return std::filesystem::path(local_app_data.data()) / L"Gearheads Native";
     }
     return {};
 }
@@ -238,30 +236,38 @@ std::filesystem::path animation_frame(
 
 }  // namespace
 
-Game::Game(std::filesystem::path asset_root)
+Game::Game(std::filesystem::path asset_root, HWND notification_window)
     : asset_root_(std::move(asset_root)),
+      audio_(asset_root_, notification_window, application_data_directory()),
       defaults_(asset_root_ / "data/runtime-defaults.ini"),
       images_(asset_root_),
       screens_(asset_root_ / "data/screens.ini"),
       levels_(asset_root_ / "data/gearhead.ini"),
       scripts_(asset_root_ / "data/script.ini"),
       attracts_(asset_root_ / "data/anim.dat"),
-      champions_(asset_root_ / "data/gearhead.ini", champion_save_path()) {
+      champions_(
+          asset_root_ / "data/gearhead.ini", application_data_directory() / L"champions.dat"
+      ) {
+    const auto sound = [this](const std::wstring& section, int ordinal) {
+        const std::filesystem::path result = scripts_.sound(section, ordinal);
+        if (result.empty()) throw std::runtime_error("Missing recovered script sound");
+        return result;
+    };
     definitions_ = {
-        {L"Ziggy", L"roach", "sprites/zg/zg_wh01.png", "sounds/zg_lnch.wav", defaults_.toy("roach")},
-        {L"Walking Timebomb", L"bomby", "sprites/tb/tb_wh01.png", "sounds/tb_lnch.wav", defaults_.toy("bomby")},
-        {L"Clucketta", L"cluck", "sprites/ck/ck_wh01.png", "sounds/ck_lnch.wav", defaults_.toy("cluck")},
-        {L"Zap\u2013bot", L"zappa", "sprites/zb/zb_wh01.png", "sounds/zb_lnch.wav", defaults_.toy("zappa")},
-        {L"Kangaruffian", L"kanga", "sprites/kg/kg_wh01.png", "sounds/kg_lnch.wav", defaults_.toy("kanga")},
-        {L"Big Al", L"bigal", "sprites/ba/ba_wh01.png", "sounds/ba_lnch.wav", defaults_.toy("bigal")},
-        {L"Disasteroid", L"destr", "sprites/ds/ds_wh01.png", "sounds/da_lnch.wav", defaults_.toy("destr")},
-        {L"Presto", L"stick", "sprites/mm/mm_wh01.png", "sounds/mm_lnch.wav", defaults_.toy("stick")},
-        {L"Krush Kringle", L"goril", "sprites/kk/kk_wh01.png", "sounds/kk_lnch.wav", defaults_.toy("goril")},
-        {L"Deadhead", L"skull", "sprites/dh/dh_wh01.png", "sounds/dh_lnch.wav", defaults_.toy("skull")},
-        {L"Orbit", L"magnt", "sprites/sq/sq_wh01.png", "sounds/sq_lnch.wav", defaults_.toy("magnt")},
-        {L"Handy", L"handy", "sprites/ha/ha_wh01.png", "sounds/ha_lnch.wav", defaults_.toy("handy")},
-        {L"Small Fry", L"small", "sprites/sm/sm_wh01.png", "sounds/sm_lnch.wav", defaults_.toy("small")},
-        {L"Rocket", L"roket", "sprites/digit/roc1w01.png", "sounds/rocket2.wav", defaults_.toy("roket")},
+        {L"Ziggy", L"roach", "sprites/zg/zg_wh01.png", sound(L"roach", 1), defaults_.toy("roach")},
+        {L"Walking Timebomb", L"bomby", "sprites/tb/tb_wh01.png", sound(L"bomby", 1), defaults_.toy("bomby")},
+        {L"Clucketta", L"cluck", "sprites/ck/ck_wh01.png", sound(L"cluck", 1), defaults_.toy("cluck")},
+        {L"Zap\u2013bot", L"zappa", "sprites/zb/zb_wh01.png", sound(L"zappa", 1), defaults_.toy("zappa")},
+        {L"Kangaruffian", L"kanga", "sprites/kg/kg_wh01.png", sound(L"kanga", 1), defaults_.toy("kanga")},
+        {L"Big Al", L"bigal", "sprites/ba/ba_wh01.png", sound(L"bigal", 1), defaults_.toy("bigal")},
+        {L"Disasteroid", L"destr", "sprites/ds/ds_wh01.png", sound(L"destr", 1), defaults_.toy("destr")},
+        {L"Presto", L"stick", "sprites/mm/mm_wh01.png", sound(L"stick", 1), defaults_.toy("stick")},
+        {L"Krush Kringle", L"goril", "sprites/kk/kk_wh01.png", sound(L"goril", 1), defaults_.toy("goril")},
+        {L"Deadhead", L"skull", "sprites/dh/dh_wh01.png", sound(L"skull", 1), defaults_.toy("skull")},
+        {L"Orbit", L"magnt", "sprites/sq/sq_wh01.png", sound(L"magnt", 1), defaults_.toy("magnt")},
+        {L"Handy", L"handy", "sprites/ha/ha_wh01.png", sound(L"handy", 1), defaults_.toy("handy")},
+        {L"Small Fry", L"small", "sprites/sm/sm_wh01.png", sound(L"small", 2), defaults_.toy("small")},
+        {L"Rocket", L"roket", "sprites/digit/roc1w01.png", sound(L"roket", 2), defaults_.toy("roket")},
     };
     max_live_objects_ = defaults_.scalar("Maxtoys");
     AddFontResourceExW((asset_root_ / "fonts/gear.ttf").c_str(), FR_PRIVATE, nullptr);
@@ -278,6 +284,7 @@ Game::~Game() {
 }
 
 void Game::update(double seconds, const InputState& input) {
+    audio_notice_seconds_ = std::max(0.0, audio_notice_seconds_ - std::max(0.0, seconds));
     switch (screen_) {
         case Screen::Frontend: update_frontend(seconds, input); break;
         case Screen::Duel: update_duel(seconds, input); break;
@@ -299,6 +306,7 @@ std::vector<const ScreenCommand*> Game::interactive_commands() const {
 void Game::enter_frontend(const std::wstring& name) {
     const ScreenDefinition* definition = screens_.find(name);
     if (definition == nullptr) return;
+    const bool returning_from_duel = screen_ == Screen::Duel;
     frontend_name_ = lower(name);
     screen_ = Screen::Frontend;
     frontend_elapsed_ = 0.0;
@@ -339,12 +347,20 @@ void Game::enter_frontend(const std::wstring& name) {
     } else if (frontend_name_ == L"attract" || frontend_name_ == L"longdemo" ||
                frontend_name_ == L"longdemo2" || frontend_name_ == L"anime") {
         start_attract(frontend_name_);
-    } else if (frontend_name_ == L"n1_gameover") {
-        play_sound("sounds/lose2.wav");
     } else if (frontend_name_ == L"n1_victory") {
         entered_name_.clear();
     } else if (frontend_name_ == L"main") {
         tournament_active_ = false;
+    }
+    if (screen_ == Screen::Frontend) {
+        for (const ScreenCommand& command : definition->commands) {
+            if (command.key == L"routine" && !command.arguments.empty() &&
+                starts_with(command.arguments.front(), L">sound$")) {
+                activate_frontend(command.arguments.front());
+            }
+        }
+        if (frontend_name_ == L"gearlogo") play_sound_alias(L"logosound");
+        if (returning_from_duel) play_music("music/open.mid");
     }
 }
 
@@ -352,6 +368,10 @@ void Game::activate_frontend(const std::wstring& action) {
     if (action.empty()) return;
     if (action.front() == L'@') {
         enter_frontend(action.substr(1));
+        return;
+    }
+    if (starts_with(action, L">sound$") && action.size() > 7) {
+        play_sound_alias(action.substr(7));
         return;
     }
     if (starts_with(action, L">setlevel$") && action.size() > 10) {
@@ -475,6 +495,7 @@ void Game::update_frontend(double seconds, const InputState& input) {
     }
 
     if (!pressed(input, VK_RETURN) && !pressed(input, VK_SPACE)) return;
+    play_sound_alias(L"oksound");
     if (!interactive.empty()) {
         activate_frontend(command_action(*interactive[static_cast<std::size_t>(menu_item_)]));
         return;
@@ -611,6 +632,8 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
                                      ? std::array<bool, 2>{true, true}
                                      : std::array<bool, 2>{true, false};
     toys_.clear();
+    previous_toy_contacts_.clear();
+    scheduled_sounds_.clear();
     dynamic_obstacles_.clear();
     powerup_.reset();
     powerup_effect_ = {0, 0};
@@ -628,6 +651,7 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
         gauge.begin_match(defaults_.scalar("GaugeTime"));
     }
     duel_elapsed_ = 0.0;
+    duel_countdown_seconds_ = mode == DuelMode::Attract ? 0.0 : 3.0;
     simulation_accumulator_ = 0.0;
     match_winner_ = kNoMatchWinner;
     active_level_ = level != nullptr ? level : levels_.first_for_theme(selected_level_theme_);
@@ -667,6 +691,9 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
     } else {
         play_music("music/ktn_med.mid");
     }
+    if (duel_countdown_seconds_ > 0.0) {
+        play_sound_alias(L"threetwoone");
+    }
 }
 
 void Game::randomize_toybox(int player) {
@@ -689,9 +716,13 @@ void Game::cycle_selected_toy(int player, int direction) {
             available[static_cast<std::size_t>(definition)] = true;
         }
     }
+    const int previous = selected_toy_[static_cast<std::size_t>(player)];
     selected_toy_[static_cast<std::size_t>(player)] = original_next_available_toy(
         selected_toy_[static_cast<std::size_t>(player)], direction, available
     );
+    if (selected_toy_[static_cast<std::size_t>(player)] != previous) {
+        play_sound(scripts_.sound(L"arrow", 1));
+    }
     if (defaults_.scalar("Resetimeonpick") != 0) {
         launch_gauges_[static_cast<std::size_t>(player)].reset_after_launch(
             defaults_.scalar("DecayTime")
@@ -709,7 +740,7 @@ bool Game::release_toy(int player) {
         powerup_effect_[static_cast<std::size_t>(player)]
     );
     if (original_powerup_blocks_release(effect)) {
-        play_sound("sounds/power2.wav");
+        play_sound(scripts_.sound(L"puup", 2));
         return false;
     }
 
@@ -717,7 +748,7 @@ bool Game::release_toy(int player) {
     const int decay_time = defaults_.scalar("DecayTime");
     LaunchGauge& gauge = launch_gauges_[static_cast<std::size_t>(player)];
     if (!gauge.ready(decay_time, gauge_time)) {
-        play_sound("sounds/notoy.wav");
+        play_sound(scripts_.sound(L"arrow", 2));
         return false;
     }
     const int winding = gauge.winding(gauge_time);
@@ -780,6 +811,7 @@ bool Game::spawn_toy(
         }
     }
     toy.winding = winding >= 0 ? winding : defaults_.scalar("GaugeTime");
+    toy.id = next_toy_id_++;
     toys_.push_back(toy);
     if (launch_sound) play_sound(definition.launch_sound);
     return true;
@@ -787,25 +819,30 @@ bool Game::spawn_toy(
 
 void Game::update_duel(double seconds, const InputState& input) {
     duel_elapsed_ += std::max(0.0, seconds);
-    for (LaunchGauge& gauge : launch_gauges_) {
-        gauge.advance(seconds, defaults_.scalar("GaugeTime"));
-    }
     if (duel_mode_ == DuelMode::Attract && any_pressed(input)) {
         stop_music();
         activate_frontend(attract_anykey_target_);
-        if (screen_ == Screen::Frontend) play_music("music/open.mid");
         return;
     }
     if (duel_mode_ == DuelMode::Attract && duel_elapsed_ >= attract_timeout_seconds_) {
         stop_music();
         activate_frontend(attract_timeout_target_);
-        if (screen_ == Screen::Frontend) play_music("music/open.mid");
         return;
     }
     if (duel_mode_ != DuelMode::Attract && pressed(input, VK_ESCAPE)) {
         enter_frontend(L"main");
-        play_music("music/open.mid");
         return;
+    }
+    if (duel_countdown_seconds_ > 0.0) {
+        const int before = static_cast<int>(std::ceil(duel_countdown_seconds_));
+        duel_countdown_seconds_ = std::max(0.0, duel_countdown_seconds_ - std::max(0.0, seconds));
+        const int after = static_cast<int>(std::ceil(duel_countdown_seconds_));
+        if (after > 0 && after < before) play_sound_alias(L"threetwoone");
+        if (before > 0 && after == 0) play_sound_alias(L"gosound");
+        return;
+    }
+    for (LaunchGauge& gauge : launch_gauges_) {
+        gauge.advance(seconds, defaults_.scalar("GaugeTime"));
     }
 
     if (scripted_attract_ && active_attract_ != nullptr) {
@@ -838,15 +875,31 @@ void Game::update_duel(double seconds, const InputState& input) {
     }
 
     if (!computer_controlled_[0]) {
-        if (pressed(input, 'W')) release_y_[0] = move_release(release_y_[0], -1, stage_);
-        if (pressed(input, 'S')) release_y_[0] = move_release(release_y_[0], 1, stage_);
+        if (pressed(input, 'W')) {
+            const float previous = release_y_[0];
+            release_y_[0] = move_release(release_y_[0], -1, stage_);
+            if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
+        }
+        if (pressed(input, 'S')) {
+            const float previous = release_y_[0];
+            release_y_[0] = move_release(release_y_[0], 1, stage_);
+            if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
+        }
         if (pressed(input, 'A')) cycle_selected_toy(0, -1);
         if (pressed(input, 'D')) cycle_selected_toy(0, 1);
         if (pressed(input, 'F')) release_toy(0);
     }
     if (!computer_controlled_[1]) {
-        if (pressed(input, VK_UP)) release_y_[1] = move_release(release_y_[1], -1, stage_);
-        if (pressed(input, VK_DOWN)) release_y_[1] = move_release(release_y_[1], 1, stage_);
+        if (pressed(input, VK_UP)) {
+            const float previous = release_y_[1];
+            release_y_[1] = move_release(release_y_[1], -1, stage_);
+            if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
+        }
+        if (pressed(input, VK_DOWN)) {
+            const float previous = release_y_[1];
+            release_y_[1] = move_release(release_y_[1], 1, stage_);
+            if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
+        }
         if (pressed(input, VK_LEFT)) cycle_selected_toy(1, -1);
         if (pressed(input, VK_RIGHT)) cycle_selected_toy(1, 1);
         if (pressed(input, VK_RETURN) || pressed(input, VK_SPACE)) release_toy(1);
@@ -938,6 +991,13 @@ void Game::finish_tournament_match() {
         tournament_, human_won, score_[1], score_[0]
     );
     last_tournament_points_ = result.points_awarded;
+    if (human_won && score_[0] == 0) {
+        play_sound_alias(L"perfect");
+    } else if (human_won && result.points_awarded > 0) {
+        play_sound_alias(L"upscore");
+    } else if (!human_won && !result.game_over) {
+        play_sound_alias(L"dnscore");
+    }
     tournament_unlocked_level_ = std::max(
         tournament_unlocked_level_, tournament_.unlocked_level
     );
@@ -961,12 +1021,20 @@ void Game::finish_tournament_match() {
 
 void Game::finish_duel() {
     stop_music();
-    play_sound("sounds/winsnd.wav");
+    if (duel_mode_ == DuelMode::Tournament) {
+        // Tournament score/life and game-over cues are selected after applying
+        // the recovered progression result below.
+    } else if (duel_mode_ == DuelMode::HumanVsHuman || duel_mode_ == DuelMode::Attract) {
+        play_sound_alias(L"endsound");
+    } else if (match_winner_ == 1) {
+        play_sound_alias(L"winsound");
+    } else {
+        play_sound_alias(L"losesound");
+    }
     if (duel_mode_ == DuelMode::Tournament) {
         finish_tournament_match();
     } else if (duel_mode_ == DuelMode::Attract) {
         activate_frontend(attract_match_target_);
-        if (screen_ == Screen::Frontend) play_music("music/open.mid");
     } else {
         enter_frontend(
             duel_mode_ == DuelMode::HumanVsHuman ? L"qgoon2" : L"qgoon1"
@@ -1050,7 +1118,7 @@ void Game::begin_bomby_explosion(Toy& toy) {
     toy.desired_y16 = 0;
     toy.animation_ticks = 0;
     toy.exploding = true;
-    play_sound("sounds/tb_spc1.wav");
+    play_sound(scripts_.sound(L"bomby", 3));
 }
 
 ToyBox Game::collision_box(const Toy& toy) {
@@ -1255,7 +1323,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
             target.special_state = 9;
             target.effect_ticks = animation_duration(target, L"e");
             target.effect_animation = L"e";
-            play_sound("sounds/zb_spc1.wav");
+            play_sound(scripts_.sound(L"zappa", 2));
         }
     }
 
@@ -1271,7 +1339,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         source.special_state = 15;
         source.effect_ticks = animation_duration(source, L"x");
         source.effect_animation = L"x";
-        play_sound("sounds/kg_spc1.wav");
+        play_sound(scripts_.sound(L"kanga", 2));
     }
 
     if (source.definition == 6 && source.special_state == 0 &&
@@ -1286,7 +1354,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         source.effect_ticks = animation_duration(source, L"x");
         source.effect_animation = L"x";
         if (target.definition != 5 && target.definition != 13) target.winding = -100;
-        play_sound("sounds/da_spc1.wav");
+        play_sound(scripts_.sound(L"destr", 2));
     }
 
     if (source.definition == 9 && target.definition != 3 && target.definition != 13 &&
@@ -1303,7 +1371,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         source.special_state = 15;
         source.effect_ticks = animation_duration(source, L"x");
         source.effect_animation = L"x";
-        play_sound("sounds/dh_spc1.wav");
+        play_sound(scripts_.sound(L"skull", 2));
     }
 
     if (source.definition == 10 && source.impulse_y16 == 0 &&
@@ -1322,7 +1390,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         source.impulse_y16 = source.special_state * 16;
         source.effect_ticks = animation_duration(source, L"x");
         source.effect_animation = L"x";
-        play_sound("sounds/sq_spc1.wav");
+        play_sound(scripts_.sound(L"magnt", 2));
     }
 
     if (source.definition == 11 && target.definition != 9 && target.definition != 11 &&
@@ -1340,7 +1408,7 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         source.special_state = 15;
         source.effect_ticks = animation_duration(source, L"x");
         source.effect_animation = L"x";
-        play_sound("sounds/ha_spc1.wav");
+        play_sound(scripts_.sound(L"handy", 2));
     }
 
     if (source.definition == 12 && target.definition == 2 && source.impulse_y16 == 0 &&
@@ -1390,7 +1458,7 @@ void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target
             target.desired_y16 += obstacle.code == 52 ? -amount : amount;
             break;
         }
-        case 54:
+        case 54: {
             if (target.definition == 13) return;
             target.impulse_x16 = static_cast<int>(
                 (static_cast<float>(obstacle.x) - target.x) * 16.0F
@@ -1404,11 +1472,19 @@ void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target
             target.desired_y16 = 0;
             if (target.definition == 1) target.special_state = 1;
             target.winding = -100;
-            play_sound("sounds/fzp_spc1.wav");
+            play_sound(scripts_.sound(L"crak", 1));
+            const auto& crack_animation = scripts_.animation(L"crak", L"x");
+            int delay = 0;
+            for (int phase = 2; phase <= 3; ++phase) {
+                const std::size_t frame = static_cast<std::size_t>(phase - 2);
+                delay += frame < crack_animation.size() ? crack_animation[frame].ticks : 1;
+                scheduled_sounds_.emplace_back(delay, scripts_.sound(L"crak", phase));
+            }
             break;
+        }
         case 55: {
             if (obstacle.facing_right != (target.owner != 0)) return;
-            play_sound("sounds/fty_spc1.wav");
+            play_sound(scripts_.sound(L"tele", 1));
             if (target.winding <= defaults_.scalar("DecayTime")) {
                 target.winding = std::min(target.winding, 1);
                 return;
@@ -1429,6 +1505,7 @@ void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target
                 target.y = static_cast<float>(exit.y);
                 target.effect_animation = L"x";
                 target.effect_ticks = animation_duration(target, L"x");
+                play_sound(scripts_.sound(L"arrow", 3));
             }
             break;
         }
@@ -1475,7 +1552,7 @@ void Game::apply_powerup_pickup(Powerup& powerup, Toy& target) {
         original_powerup_random_bound(15, defaults_.scalar("FrameStep"))
     );
     powerup.active = false;
-    play_sound("sounds/power1.wav");
+    play_sound(scripts_.sound(L"puup", 1));
 
     if (kind == PowerupKind::Rocket) {
         const float x = recipient == 0
@@ -1632,12 +1709,23 @@ void Game::update_dynamic_obstacle(DynamicObstacle& obstacle) {
 }
 
 void Game::advance_duel_tick() {
+    auto pending = scheduled_sounds_.begin();
+    while (pending != scheduled_sounds_.end()) {
+        --pending->first;
+        if (pending->first <= 0) {
+            play_sound(pending->second);
+            pending = scheduled_sounds_.erase(pending);
+        } else {
+            ++pending;
+        }
+    }
     update_powerups();
     for (DynamicObstacle& obstacle : dynamic_obstacles_) update_dynamic_obstacle(obstacle);
     const auto physical_toy = [](const Toy& toy) {
         return toy.active && !toy.exploding && toy.winding > 0;
     };
     const std::size_t body_count = toys_.size() + dynamic_obstacles_.size();
+    std::set<std::pair<std::uint64_t, std::uint64_t>> current_toy_contacts;
     std::vector<std::size_t> parent(body_count);
     std::vector<bool> motion_blocked(body_count, false);
     for (std::size_t index = 0; index < parent.size(); ++index) parent[index] = index;
@@ -1824,6 +1912,13 @@ void Game::advance_duel_tick() {
             const float overlap_y = std::min(left_box.bottom, right_box.bottom) -
                                     std::max(left_box.top, right_box.top);
             if (overlap_x <= 0.0F || overlap_y <= 0.0F) continue;
+            const auto contact = std::minmax(left.id, right.id);
+            current_toy_contacts.emplace(contact.first, contact.second);
+            if (!previous_toy_contacts_.contains({contact.first, contact.second})) {
+                const int relative_x = left.velocity_x16 - right.velocity_x16;
+                const int relative_y = left.velocity_y16 - right.velocity_y16;
+                play_collision_sound(static_cast<int>(std::hypot(relative_x, relative_y)));
+            }
             apply_special_contact(left, right);
             apply_special_contact(right, left);
             if (ice_) {
@@ -2011,11 +2106,11 @@ void Game::advance_duel_tick() {
         box = collision_box(toy);
         if (box.left > static_cast<float>(stage_.right)) {
             ++score_[0];
-            play_sound("sounds/scoradd.wav");
+            play_sound(scripts_.sound(L"digit", 1));
             toy.active = false;
         } else if (box.right < static_cast<float>(stage_.left)) {
             ++score_[1];
-            play_sound("sounds/scoradd.wav");
+            play_sound(scripts_.sound(L"digit", 2));
             toy.active = false;
         }
     };
@@ -2068,7 +2163,7 @@ void Game::advance_duel_tick() {
                     if (toy.owner != 0) toy.impulse_x16 = -toy.impulse_x16;
                     toy.effect_ticks = animation_duration(toy, L"x");
                     toy.effect_animation = L"x";
-                    play_sound("sounds/mm_spc1.wav");
+                    play_sound(scripts_.sound(L"stick", 2));
                 }
             }
         }
@@ -2081,7 +2176,7 @@ void Game::advance_duel_tick() {
                 if (toy.special_state == 2) {
                     toy.effect_ticks = animation_duration(toy, L"x");
                     toy.effect_animation = L"x";
-                    play_sound("sounds/kk_spc1.wav");
+                    play_sound(scripts_.sound(L"goril", 3));
                 }
                 if (toy.special_state == 0) gorilla_roars.push_back(toy_index);
             }
@@ -2167,8 +2262,9 @@ void Game::advance_duel_tick() {
         small.y = spawn.y;
         small.heading = spawn.owner == 0 ? 0 : 32;
         small.winding = defaults_.scalar("GaugeTime");
+        small.id = next_toy_id_++;
         toys_.push_back(small);
-        play_sound("sounds/ck_spc1.wav");
+        play_sound(scripts_.sound(L"small", 1));
     }
     for (const std::size_t source_index : gorilla_roars) {
         const Toy& source = toys_[source_index];
@@ -2220,12 +2316,18 @@ void Game::advance_duel_tick() {
     match_winner_ = original_match_winner(
         score_[0], score_[1], defaults_.scalar("Winningscore")
     );
+    previous_toy_contacts_ = std::move(current_toy_contacts);
 }
 
 void Game::render(Canvas& canvas) {
     switch (screen_) {
         case Screen::Frontend: render_frontend(canvas); break;
         case Screen::Duel: render_duel(canvas); break;
+    }
+    if (audio_notice_seconds_ > 0.0 && !audio_notice_.empty()) {
+        canvas.fill_rect(176, 436, 288, 32, RGB(0, 0, 0));
+        canvas.frame_rect(176, 436, 288, 32, kCream, 1);
+        canvas.text(audio_notice_, 320, 443, 18, kCream, 1);
     }
 }
 
@@ -2481,28 +2583,54 @@ void Game::render_duel(Canvas& canvas) {
     if (duel_mode_ == DuelMode::Tournament) {
         draw_number(tournament_.lives, 320, 383);
     }
-}
-
-void Game::play_music(const std::filesystem::path& relative_path) {
-    stop_music();
-    const std::wstring command = L"open \"" + (asset_root_ / relative_path).wstring() +
-                                 L"\" type sequencer alias gearheads_music";
-    if (mciSendStringW(command.c_str(), nullptr, 0, nullptr) == 0) {
-        mciSendStringW(L"play gearheads_music repeat", nullptr, 0, nullptr);
+    if (duel_countdown_seconds_ > 0.0) {
+        canvas.text(
+            std::to_wstring(static_cast<int>(std::ceil(duel_countdown_seconds_))),
+            320,
+            190,
+            96,
+            kCream,
+            1
+        );
     }
 }
 
-void Game::stop_music() {
-    mciSendStringW(L"stop gearheads_music", nullptr, 0, nullptr);
-    mciSendStringW(L"close gearheads_music", nullptr, 0, nullptr);
+void Game::play_music(const std::filesystem::path& relative_path) {
+    audio_.play_music(relative_path);
 }
 
-void Game::play_sound(const std::filesystem::path& relative_path) const {
-    PlaySoundW(
-        (asset_root_ / relative_path).c_str(),
-        nullptr,
-        SND_ASYNC | SND_FILENAME | SND_NODEFAULT
-    );
+void Game::stop_music() {
+    audio_.stop_music();
+}
+
+void Game::play_sound(const std::filesystem::path& relative_path) {
+    audio_.play_sound(relative_path);
+}
+
+void Game::play_sound_alias(std::wstring_view alias) {
+    audio_.play_alias(alias);
+}
+
+void Game::play_collision_sound(int relative_speed16) {
+    if (relative_speed16 <= 0) return;
+    const int ordinal = relative_speed16 < 160 ? 1 : relative_speed16 < 480 ? 2 : 3;
+    play_sound(scripts_.sound(L"boxer", ordinal));
+}
+
+void Game::handle_mci_notify(WPARAM status, LPARAM device_id) {
+    audio_.handle_mci_notify(status, device_id);
+}
+
+void Game::toggle_sound_effects() {
+    audio_.set_sound_effects_enabled(!audio_.sound_effects_enabled());
+    audio_notice_ = audio_.sound_effects_enabled() ? L"Sound effects: On" : L"Sound effects: Off";
+    audio_notice_seconds_ = 2.5;
+}
+
+void Game::toggle_music() {
+    audio_.set_music_enabled(!audio_.music_enabled());
+    audio_notice_ = audio_.music_enabled() ? L"Music: On" : L"Music: Off";
+    audio_notice_seconds_ = 2.5;
 }
 
 }  // namespace gh

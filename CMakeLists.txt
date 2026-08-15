@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(GearheadsNative VERSION 1.0.0 LANGUAGES CXX RC)
+project(GearheadsNative VERSION 1.0.1 LANGUAGES CXX RC)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -29,6 +29,7 @@ set_source_files_properties("${EMBEDDED_RESOURCE_FILE}" PROPERTIES GENERATED TRU
 add_executable(gearheads WIN32
     "${EMBEDDED_RESOURCE_FILE}"
     src/main.cpp
+    src/audio.cpp
     src/embedded_assets.cpp
     src/render.cpp
     src/screens.cpp
@@ -66,6 +67,7 @@ target_link_options(gearheads PRIVATE
 )
 target_link_libraries(gearheads PRIVATE
     gdi32
+    dsound
     ole32
     shell32
     uuid
@@ -94,6 +96,35 @@ if(BUILD_TESTING)
     add_test(
         NAME embedded_assets
         COMMAND embedded_assets_test "${CMAKE_BINARY_DIR}/embedded-assets-test-cache"
+    )
+    add_executable(audio_wave_test
+        tests/audio_wave_test.cpp
+        src/audio.cpp
+    )
+    target_compile_features(audio_wave_test PRIVATE cxx_std_20)
+    target_compile_definitions(audio_wave_test PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_include_directories(audio_wave_test PRIVATE src)
+    target_link_libraries(audio_wave_test PRIVATE dsound winmm)
+    add_test(
+        NAME audio_wave
+        COMMAND audio_wave_test "${CMAKE_SOURCE_DIR}/assets/sounds"
+    )
+    add_test(
+        NAME audio_references
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/audio_reference_test.py"
+                "${CMAKE_SOURCE_DIR}/assets"
+    )
+    add_executable(audio_loop_test
+        tests/audio_loop_test.cpp
+        src/audio.cpp
+    )
+    target_compile_features(audio_loop_test PRIVATE cxx_std_20)
+    target_compile_definitions(audio_loop_test PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_include_directories(audio_loop_test PRIVATE src)
+    target_link_libraries(audio_loop_test PRIVATE dsound winmm)
+    add_test(
+        NAME audio_loop
+        COMMAND audio_loop_test "${CMAKE_BINARY_DIR}/audio-loop-test"
     )
     add_executable(screen_data_test
         tests/screen_data_test.cpp

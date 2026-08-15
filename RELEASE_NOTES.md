@@ -1,33 +1,39 @@
-# Gearheads Native Windows Port 1.0.0
+# Gearheads Native Windows Port 1.0.1
 
-Release date: 2026-08-14
+Release date: 2026-08-15
 
-This is the first complete native Windows release.
+This maintenance release repairs and completes the native audio path while
+preserving the self-contained Windows executable.
 
-## Release highlights
+## Audio repairs
 
-- One self-contained 64-bit Windows executable with all converted runtime data
-  embedded; no original CD, VHD, installer, EXE, DLL, archive, or external
-  asset folder is required.
-- Borderless fullscreen toggled with Alt+Enter, with aspect-ratio-preserving
-  letterboxing.
-- Native implementations of the game screens, two-player duels, computer
-  opponents, tournament progression, champion persistence, attract mode,
-  physics, obstacles, powerups, and per-toy behavior.
-- Correct gameplay sprite palette, upright sprite orientation, recovered sprite
-  origins, and individual launch timing behavior.
-- Double-buffered presentation and GDI synchronization to eliminate the
-  reported black flicker.
-- Embedded 1.0.0 Windows version information, modern application manifest, and
-  a PE import audit requiring only Windows system libraries.
-- Reproducible asset, data, gameplay, packaging, and smoke-test coverage.
+- Replaced the single-channel `PlaySound` path with a 64-voice DirectSound
+  mixer, so launches, impacts, abilities, scoring, and interface cues can
+  overlap.
+- Replaced the unsupported MCI `repeat` command with notified playback and an
+  explicit restart at track completion. Legacy MCI path handling now uses a
+  compatible short path for the content-addressed cache.
+- Wired cue selection to the recovered script and `[sound]` tables: light,
+  medium, and heavy collisions; both scoring sides; all crack phases;
+  teleporter entry and exit; selection, countdown, go, logo, menu, perfect,
+  tournament score, game-over, win, and loss cues are now reachable.
+- Corrected result audio so one-player and tournament losses no longer play the
+  win sting. Frontend music is restored after a duel and level music remains
+  selected from the level's recovered track list.
+- Added F9 sound-effects and F10 music toggles with persistent settings and
+  on-screen confirmation.
+- Added `%LOCALAPPDATA%\Gearheads Native\audio.log` diagnostics and graceful
+  fallback when an effects device or MIDI mapper is unavailable.
+- Added validation for all 47 PCM effects, all 19 MIDI references, recovered
+  cue mappings, and the DirectSound system-library import.
 
-## Runtime notes
+## Existing 1.0 guarantees
 
-The EXE materializes its embedded converted data under
-`%LOCALAPPDATA%\Gearheads Native\Cache` on first launch. This cache is not an
-installation dependency: deleting it causes the same EXE to recreate it.
-Champion data is kept separately so clearing the cache does not erase scores.
+- One self-contained 64-bit `Gearheads.exe`; no original CD, VHD, installer,
+  executable, DLL, archive, or external asset folder is required.
+- Alt+Enter borderless fullscreen with 4:3 letterboxing.
+- Correct gameplay sprite palette and orientation, per-toy launch timing, and
+  synchronized double-buffered presentation without black-frame flicker.
 
-The executable is unsigned. Verify it with the SHA-256 values supplied in the
-release before bypassing any SmartScreen warning.
+The executable is unsigned. Verify it with the supplied SHA-256 values before
+bypassing any SmartScreen warning.

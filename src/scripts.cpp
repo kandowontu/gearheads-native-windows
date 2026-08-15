@@ -176,4 +176,11 @@ const std::vector<AnimationFrame>& ScriptDatabase::locomotion(const std::wstring
     return animation(section, L"x");
 }
 
+std::filesystem::path ScriptDatabase::sound(const std::wstring& section, int ordinal) const {
+    const ScriptSection* definition = find(section);
+    if (definition == nullptr) return {};
+    const auto found = definition->sounds.find(ordinal);
+    return found == definition->sounds.end() ? std::filesystem::path{} : found->second;
+}
+
 }  // namespace gh
