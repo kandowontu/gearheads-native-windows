@@ -116,6 +116,21 @@ and block, all four walls, every board surface, the transporter, crack, rock,
 and powerup.  This table is now the inventory for replacing callbacks one at a
 time without inferring behavior from sprite names.
 
+The private byte at object offset `+32` is behavior state, while `+33` is the
+collision layer, `+34` is the resolved animation state, `+35` is that state's
+frame clock, and `+40` is the per-contact attachment pointer. These fields are
+not interchangeable: the original callbacks freely update behavior timers
+while animation selection resets only `+35`. The native runtime therefore
+stores them independently and clears attachment pointers at the beginning of
+each collision pass.
+
+Segment 13's animation-state decoder maps `w/e/d/z/f/x/y` to bases
+`0/3/6/9/12/15/18`; `d` and `u` suffixes add one and two when the corresponding
+directional state exists. A negative SCRIPT resource copies an earlier
+ten-byte frame record. Resolving those aliases is required for wind-down,
+death, and action durations; treating them as non-image commands shortens
+several toy state machines.
+
 Bomby's override is especially complete.  Segment 10 `2832-2869` forces a
 last positive winding value below `DecayTime` to one before calling the common
 toy tick.  Its expiry callback at `1e8c-2038` stops all motion, selects state 6,

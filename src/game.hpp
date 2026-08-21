@@ -62,10 +62,14 @@ struct Toy {
     int impulse_y16 = 0;
     int heading = 0;
     int winding = 0;
+    int behavior_state = 0;
+    int collision_layer = 0;
+    int animation_state = 0;
     int animation_ticks = 0;
-    int special_state = 0;
-    int effect_ticks = 0;
-    std::wstring effect_animation;
+    int age_ticks = 0;
+    std::uint64_t attached_id = 0;
+    bool animation_finished = false;
+    bool rocket_docked = false;
     bool exploding = false;
     bool active = true;
     std::uint64_t id = 0;
@@ -93,6 +97,7 @@ struct DynamicObstacle {
     int behavior_state = 0;
     int impulse_x16 = 0;
     int impulse_y16 = 0;
+    int winding = 0x4000;
     bool transition_state = false;
 };
 
@@ -122,11 +127,18 @@ private:
     void update_duel(double seconds, const InputState& input);
     void advance_duel_tick();
     void update_desired_motion(Toy& toy);
-    void apply_special_contact(Toy& source, Toy& target);
+    bool apply_contact_filter(Toy& source, Toy& target);
+    void apply_contact_effect(Toy& source, Toy& target);
+    void apply_dynamic_special_contact(Toy& source, DynamicObstacle& target);
+    void apply_static_special_contact(Toy& source, const ObstacleDefinition& target);
     void apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target);
     void reverse_toy(Toy& toy);
     void begin_bomby_explosion(Toy& toy);
-    int animation_duration(const Toy& toy, const std::wstring& state) const;
+    int animation_duration(const Toy& toy, int state) const;
+    void set_animation_state(Toy& toy, int base_state);
+    void advance_animation(Toy& toy);
+    Toy* find_toy(std::uint64_t id);
+    const Toy* find_toy(std::uint64_t id) const;
     void start_duel(DuelMode mode, const LevelDefinition* level = nullptr);
     void begin_tournament(int encoded_start);
     void start_tournament_match();
@@ -185,6 +197,7 @@ private:
     std::vector<ToyDefinition> definitions_;
     std::vector<Toy> toys_;
     std::uint64_t next_toy_id_ = 1;
+    std::optional<std::uint64_t> docked_rocket_id_;
     std::set<std::pair<std::uint64_t, std::uint64_t>> previous_toy_contacts_;
     std::vector<std::pair<int, std::filesystem::path>> scheduled_sounds_;
     std::vector<DynamicObstacle> dynamic_obstacles_;

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <regex>
 #include <stdexcept>
+#include <unordered_set>
 
 namespace gh {
 namespace {
@@ -82,6 +83,9 @@ ScriptDatabase::ScriptDatabase(const std::filesystem::path& path) {
     static const std::wregex indexed_key(LR"(^([a-z]+)([0-9]+)$)");
 
     ScriptSection* current = nullptr;
+    std::vector<AnimationFrame> raw_frames;
+    std::unordered_set<std::wstring> closed_states;
+    std::wstring last_state;
     std::size_t start = 0;
     while (start <= text.size()) {
         const std::size_t newline = text.find(L'\n', start);
@@ -97,6 +101,9 @@ ScriptDatabase::ScriptDatabase(const std::filesystem::path& path) {
                 index_[name] = sections_.size();
                 sections_.push_back({name, {}, {}, {}});
                 current = &sections_.back();
+                raw_frames.clear();
+                closed_states.clear();
+                last_state.clear();
             } else if (current != nullptr) {
                 const std::size_t equals = line.find(L'=');
                 if (equals == std::wstring::npos) throw std::runtime_error("Malformed script entry");
@@ -113,19 +120,38 @@ ScriptDatabase::ScriptDatabase(const std::filesystem::path& path) {
                     }
                     const std::wstring state = match[1].str();
                     const int ordinal = integer(match[2].str());
-                    if (arguments.front().empty() || arguments.front().front() != L'@') {
-                        if (newline == std::wstring::npos) break;
-                        start = newline + 1;
-                        continue;
-                    }
-                    std::wstring resource = lower(arguments.front().substr(1));
                     if (state == L"s") {
+                        if (arguments.front().empty() || arguments.front().front() != L'@') {
+                            if (newline == std::wstring::npos) break;
+                            start = newline + 1;
+                            continue;
+                        }
+                        const std::wstring resource = lower(arguments.front().substr(1));
                         current->sounds[ordinal] =
                             std::filesystem::path(L"sounds") / (resource + L".wav");
                     } else if (!current->archive.empty()) {
                         AnimationFrame frame;
-                        frame.image = std::filesystem::path(L"sprites") / current->archive /
-                                      (resource + L".png");
+                        if (!arguments.front().empty() && arguments.front().front() == L'@') {
+                            const std::wstring resource = lower(arguments.front().substr(1));
+                            frame.image = std::filesystem::path(L"sprites") / current->archive /
+                                          (resource + L".png");
+                        } else {
+                            int relative = 0;
+                            try {
+                                relative = integer(arguments.front());
+                            } catch (const std::exception&) {
+                                relative = 0;
+                            }
+                            const long long referenced =
+                                static_cast<long long>(raw_frames.size()) + relative;
+                            if (relative >= 0 || referenced < 0 ||
+                                referenced >= static_cast<long long>(raw_frames.size())) {
+                                if (newline == std::wstring::npos) break;
+                                start = newline + 1;
+                                continue;
+                            }
+                            frame = raw_frames[static_cast<std::size_t>(referenced)];
+                        }
                         if (arguments.size() > 1) {
                             try {
                                 frame.ticks = std::max(1, integer(arguments[1]));
@@ -140,7 +166,14 @@ ScriptDatabase::ScriptDatabase(const std::filesystem::path& path) {
                                 break;
                             }
                         }
-                        current->animations[state].push_back(std::move(frame));
+                        raw_frames.push_back(frame);
+                        if (!last_state.empty() && state != last_state) {
+                            closed_states.insert(last_state);
+                        }
+                        if (!closed_states.contains(state)) {
+                            current->animations[state].push_back(std::move(frame));
+                        }
+                        last_state = state;
                     }
                 }
             }

@@ -41,6 +41,7 @@ add_executable(gearheads WIN32
     src/obstacles.cpp
     src/original_dispatch.cpp
     src/toy_effects.cpp
+    src/toy_behavior.cpp
     src/powerups.cpp
     src/dynamic_obstacles.cpp
     src/tournament.cpp
@@ -236,6 +237,13 @@ if(BUILD_TESTING)
     target_compile_features(toy_effects_test PRIVATE cxx_std_20)
     target_include_directories(toy_effects_test PRIVATE src)
     add_test(NAME toy_effects COMMAND toy_effects_test)
+    add_executable(toy_behavior_test
+        tests/toy_behavior_test.cpp
+        src/toy_behavior.cpp
+    )
+    target_compile_features(toy_behavior_test PRIVATE cxx_std_20)
+    target_include_directories(toy_behavior_test PRIVATE src)
+    add_test(NAME toy_behavior COMMAND toy_behavior_test)
     add_executable(powerups_test
         tests/powerups_test.cpp
         src/powerups.cpp

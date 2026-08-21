@@ -5,6 +5,7 @@
 #include "physics.hpp"
 #include "powerups.hpp"
 #include "toy_effects.hpp"
+#include "toy_behavior.hpp"
 
 #include <shlobj.h>
 
@@ -632,6 +633,7 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
                                      ? std::array<bool, 2>{true, true}
                                      : std::array<bool, 2>{true, false};
     toys_.clear();
+    docked_rocket_id_.reset();
     previous_toy_contacts_.clear();
     scheduled_sounds_.clear();
     dynamic_obstacles_.clear();
@@ -733,9 +735,25 @@ void Game::cycle_selected_toy(int player, int direction) {
 bool Game::release_toy(int player) {
     // Maxtoys is the original global live-object ceiling (segment 10:08e1 and
     // 24b0), independent of the 1-12 toybox-size roster option.
-    if (player < 0 || player > 1 || static_cast<int>(toys_.size()) >= max_live_objects_) {
-        return false;
+    if (player < 0 || player > 1) return false;
+    if (docked_rocket_id_.has_value()) {
+        Toy* rocket = find_toy(*docked_rocket_id_);
+        if (rocket == nullptr) {
+            docked_rocket_id_.reset();
+        } else if (rocket->owner == player && rocket->rocket_docked) {
+            const int direction = player == 0 ? 1 : -1;
+            rocket->rocket_docked = false;
+            rocket->collision_layer = 0;
+            rocket->velocity_x16 = direction *
+                definitions_[rocket->definition].parameters.horizontal_speed() * 4;
+            rocket->desired_x16 = rocket->velocity_x16;
+            set_animation_state(*rocket, kAnimationWalk);
+            play_sound(scripts_.sound(L"roket", 2));
+            docked_rocket_id_.reset();
+            return true;
+        }
     }
+    if (static_cast<int>(toys_.size()) >= max_live_objects_) return false;
     const PowerupKind effect = static_cast<PowerupKind>(
         powerup_effect_[static_cast<std::size_t>(player)]
     );
@@ -1044,29 +1062,22 @@ void Game::finish_duel() {
 
 std::filesystem::path Game::sprite_for(const Toy& toy) const {
     const ToyDefinition& definition = definitions_[toy.definition];
-    if (toy.exploding) {
-        const std::filesystem::path frame = animation_frame(
-            scripts_.animation(definition.script_section, L"d"), toy.animation_ticks, false
-        );
-        if (!frame.empty()) return frame;
+    const bool rocket = toy.definition == 13;
+    std::wstring key = original_animation_key(toy.animation_state, rocket);
+    const auto* animation = &scripts_.animation(definition.script_section, key);
+    if (animation->empty() && rocket) {
+        key = original_animation_key(toy.animation_state, false);
+        animation = &scripts_.animation(definition.script_section, key);
     }
-    if (toy.effect_ticks > 0 && !toy.effect_animation.empty()) {
-        const std::filesystem::path frame = animation_frame(
-            scripts_.animation(definition.script_section, toy.effect_animation),
-            toy.animation_ticks,
-            true
-        );
-        if (!frame.empty()) return frame;
+    if (animation->empty()) {
+        key = original_animation_key(original_animation_base(toy.animation_state), rocket);
+        animation = &scripts_.animation(definition.script_section, key);
     }
-    if ((toy.definition == 0 || toy.definition == 2) && toy.special_state != 0) {
-        const std::filesystem::path frame = animation_frame(
-            scripts_.animation(definition.script_section, L"x"), toy.animation_ticks, true
-        );
-        if (!frame.empty()) return frame;
-    }
-    const auto& animation = scripts_.locomotion(definition.script_section);
-    if (animation.empty()) return definition.sprite;
-    const std::filesystem::path frame = animation_frame(animation, toy.animation_ticks, true);
+    if (animation->empty()) animation = &scripts_.locomotion(definition.script_section);
+    if (animation->empty()) return definition.sprite;
+    const int base = original_animation_base(toy.animation_state);
+    const bool loop = base != kAnimationDeath && !original_animation_is_transient(base);
+    const std::filesystem::path frame = animation_frame(*animation, toy.animation_ticks, loop);
     return frame.empty() ? definition.sprite : frame;
 }
 
@@ -1101,13 +1112,67 @@ std::filesystem::path Game::sprite_for(const Powerup& powerup) const {
     return frame.empty() ? std::filesystem::path("sprites/digit/key1w01.png") : frame;
 }
 
-int Game::animation_duration(const Toy& toy, const std::wstring& state) const {
-    return std::max(
-        1,
-        total_animation_ticks(
-            scripts_.animation(definitions_[toy.definition].script_section, state)
-        )
+int Game::animation_duration(const Toy& toy, int state) const {
+    const std::wstring& section = definitions_[toy.definition].script_section;
+    const bool rocket = toy.definition == 13;
+    const auto* animation = &scripts_.animation(
+        section, original_animation_key(state, rocket)
     );
+    if (animation->empty() && rocket) {
+        animation = &scripts_.animation(section, original_animation_key(state));
+    }
+    if (animation->empty()) {
+        animation = &scripts_.animation(
+            section, original_animation_key(original_animation_base(state), rocket)
+        );
+    }
+    return std::max(1, total_animation_ticks(*animation));
+}
+
+void Game::set_animation_state(Toy& toy, int base_state) {
+    const std::wstring& section = definitions_[toy.definition].script_section;
+    const int base = original_animation_base(base_state);
+    const bool has_down = !scripts_.animation(
+        section, original_animation_key(base + 1, toy.definition == 13)
+    ).empty();
+    const bool has_up = !scripts_.animation(
+        section, original_animation_key(base + 2, toy.definition == 13)
+    ).empty();
+    const int resolved = original_directional_animation_state(
+        base, toy.heading, has_down, has_up
+    );
+    if (resolved == toy.animation_state) return;
+    toy.animation_state = resolved;
+    toy.animation_ticks = 0;
+    toy.animation_finished = false;
+}
+
+void Game::advance_animation(Toy& toy) {
+    ++toy.age_ticks;
+    ++toy.animation_ticks;
+    const int duration = animation_duration(toy, toy.animation_state);
+    if (toy.animation_ticks < duration) return;
+    const int base = original_animation_base(toy.animation_state);
+    if (base == kAnimationDeath) {
+        toy.animation_ticks = duration;
+        toy.animation_finished = true;
+    } else if (original_animation_is_transient(base)) {
+        set_animation_state(toy, kAnimationWalk);
+    }
+}
+
+Toy* Game::find_toy(std::uint64_t id) {
+    const auto found = std::find_if(toys_.begin(), toys_.end(), [id](const Toy& toy) {
+        return toy.id == id && toy.active;
+    });
+    return found == toys_.end() ? nullptr : &*found;
+}
+
+const Toy* Game::find_toy(std::uint64_t id) const {
+    const auto found = std::find_if(toys_.begin(), toys_.end(), [id](const Toy& toy) {
+        return toy.id == id && toy.active;
+    });
+    return found == toys_.end() ? nullptr : &*found;
 }
 
 void Game::begin_bomby_explosion(Toy& toy) {
@@ -1116,7 +1181,7 @@ void Game::begin_bomby_explosion(Toy& toy) {
     toy.velocity_y16 = 0;
     toy.desired_x16 = 0;
     toy.desired_y16 = 0;
-    toy.animation_ticks = 0;
+    set_animation_state(toy, kAnimationDeath);
     toy.exploding = true;
     play_sound(scripts_.sound(L"bomby", 3));
 }
@@ -1125,11 +1190,24 @@ ToyBox Game::collision_box(const Toy& toy) {
     const ToyDefinition& definition = definitions_[toy.definition];
     const ToyParameters& parameters = definition.parameters;
     const Image& sprite = images_.load(sprite_for(toy));
-    const float draw_left = toy.x - static_cast<float>(sprite.width) / 2.0F;
-    const float draw_top = toy.y - static_cast<float>(sprite.height) / 2.0F;
+    float center_x = toy.x;
+    float center_y = toy.y;
+    if (toy.definition == 11 && toy.attached_id != 0) {
+        if (const Toy* attached = find_toy(toy.attached_id); attached != nullptr) {
+            const ToyParameters& attached_parameters =
+                definitions_[attached->definition].parameters;
+            const float direction = toy.owner == 0 ? 1.0F : -1.0F;
+            center_x = attached->x + direction *
+                static_cast<float>(attached_parameters.handy_attach_x());
+            center_y = attached->y +
+                static_cast<float>(attached_parameters.handy_attach_y());
+        }
+    }
+    const float draw_left = center_x - static_cast<float>(sprite.width) / 2.0F;
+    const float draw_top = center_y - static_cast<float>(sprite.height) / 2.0F;
     float front = static_cast<float>(parameters.collision_front_percent());
     float back = static_cast<float>(parameters.collision_back_percent());
-    if (toy.velocity_x16 < 0) {
+    if (toy.owner != 0) {
         front = 100.0F - front;
         back = 100.0F - back;
     }
@@ -1217,9 +1295,10 @@ ToyBox Game::collision_box(const Powerup& powerup) {
 }
 
 void Game::update_desired_motion(Toy& toy) {
-    if (toy.definition == 0 && toy.special_state != 0) {
+    if (toy.definition == 0 && toy.behavior_state != 0) {
         toy.desired_x16 = 0;
         toy.desired_y16 = 0;
+        set_animation_state(toy, kAnimationAction);
         return;
     }
     const ToyParameters& parameters = definitions_[toy.definition].parameters;
@@ -1239,6 +1318,7 @@ void Game::update_desired_motion(Toy& toy) {
     if (mode == 0) {
         toy.desired_x16 = toy.heading > 16 && toy.heading < 48 ? -speed16 : speed16;
         toy.desired_y16 = 0;
+        set_animation_state(toy, original_animation_base(toy.animation_state));
         return;
     }
     if (mode == 1) {
@@ -1264,11 +1344,12 @@ void Game::update_desired_motion(Toy& toy) {
                 toy.heading = 56;
                 break;
         }
+        set_animation_state(toy, original_animation_base(toy.animation_state));
         return;
     }
     if (mode == 2) {
         const int erratic_period = std::max(1, defaults_.scalar("Erratic"));
-        if (toy.animation_ticks % erratic_period == 0) {
+        if (toy.age_ticks % erratic_period == 0) {
             std::uniform_int_distribution<int> heading_distribution(-16, 15);
             toy.heading = (heading_distribution(random_) + (toy.owner == 0 ? 0 : 32)) & 63;
             const int magnitude16 = static_cast<int>(std::hypot(
@@ -1282,6 +1363,8 @@ void Game::update_desired_motion(Toy& toy) {
         const MotionVector desired = vector_from_original_heading(speed16, toy.heading);
         toy.desired_x16 = desired.x16;
         toy.desired_y16 = desired.y16;
+        if (toy.desired_x16 != 0) toy.owner = toy.desired_x16 > 0 ? 0 : 1;
+        set_animation_state(toy, original_animation_base(toy.animation_state));
         return;
     }
 
@@ -1289,25 +1372,16 @@ void Game::update_desired_motion(Toy& toy) {
     toy.desired_y16 = 0;
 }
 
-void Game::apply_special_contact(Toy& source, Toy& target) {
+bool Game::apply_contact_filter(Toy& source, Toy& target) {
     if (!source.active || source.exploding || source.winding <= 0 ||
         !target.active || target.exploding || target.winding <= 0) {
-        return;
+        return false;
     }
+    const int decay_time = defaults_.scalar("DecayTime");
     const int source_x16 = static_cast<int>(source.x * 16.0F);
     const int target_x16 = static_cast<int>(target.x * 16.0F);
 
-    if (source.definition == 0 && target.definition != 9) {
-        // Ziggy's +64 callback toggles +32 on contact with any live toy other
-        // than original type 24 (Deadhead). The nonzero state stops motion.
-        source.special_state = source.special_state == 0 ? 1 : 0;
-        if (source.special_state != 0) {
-            source.desired_x16 = 0;
-            source.desired_y16 = 0;
-        }
-    }
-
-    if (source.definition == 3 && source.winding > defaults_.scalar("DecayTime") &&
+    if (source.definition == 3 && source.winding > decay_time &&
         original_target_is_in_front(source.owner, source_x16, target_x16)) {
         const int previous = target.winding;
         target.winding = original_zappa_drain(
@@ -1315,105 +1389,200 @@ void Game::apply_special_contact(Toy& source, Toy& target) {
         );
         source.desired_x16 = 0;
         source.desired_y16 = 0;
-        source.special_state = 15;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
-        if (previous != target.winding && target.winding > defaults_.scalar("DecayTime") &&
-            target.special_state != 9) {
-            target.special_state = 9;
-            target.effect_ticks = animation_duration(target, L"e");
-            target.effect_animation = L"e";
+        set_animation_state(source, kAnimationAction);
+        if (previous != target.winding && target.winding > decay_time &&
+            original_animation_base(target.animation_state) != kAnimationZap) {
+            set_animation_state(target, kAnimationZap);
             play_sound(scripts_.sound(L"zappa", 2));
+        }
+    }
+
+    if (source.definition == 6 && source.winding > decay_time &&
+        source.behavior_state == 0 &&
+        original_animation_base(source.animation_state) == kAnimationWalk &&
+        original_target_is_in_front(source.owner, source_x16, target_x16)) {
+        if (target.definition == 6 && target.winding >= source.winding) return true;
+        source.behavior_state =
+            definitions_[source.definition].parameters.primary_extra();
+        source.velocity_x16 = 0;
+        source.velocity_y16 = 0;
+        source.desired_x16 = 0;
+        source.desired_y16 = 0;
+        set_animation_state(source, kAnimationAction);
+        if (target.definition != 5 && target.definition != 13) target.winding = -100;
+        play_sound(scripts_.sound(L"destr", 2));
+    }
+
+    if (source.definition == 9 && target.definition != 3 && target.definition != 13 &&
+        source.winding > decay_time && target.winding > decay_time &&
+        original_animation_base(target.animation_state) != kAnimationFlip) {
+        if (target.definition == 4 && target.owner == source.owner) return true;
+        if (target.winding > source.winding) {
+            std::uniform_int_distribution<int> coin(0, 1);
+            if (coin(random_) != 0) return true;
+        }
+        reverse_toy(target);
+        set_animation_state(target, kAnimationFlip);
+        set_animation_state(source, kAnimationAction);
+        play_sound(scripts_.sound(L"skull", 2));
+    }
+
+    if (source.definition == 10) {
+        source.impulse_y16 = original_orbit_contact_impulse(
+            source.impulse_y16, source.behavior_state, source.winding, decay_time
+        );
+    }
+
+    if (source.definition == 11 && target.definition != 9 && target.definition != 11 &&
+        target.definition != 13 && source.winding > decay_time && target.winding > 0 &&
+        original_target_is_in_front(source.owner, source_x16, target_x16)) {
+        if (target.attached_id != 0) {
+            const Toy* attached = find_toy(target.attached_id);
+            if (attached != nullptr && attached->definition == 11) return true;
+        }
+        const int previous = target.winding;
+        target.winding = std::min(
+            defaults_.scalar("GaugeTime"),
+            target.winding + definitions_[source.definition].parameters.primary_extra()
+        );
+        if (previous <= decay_time && target.winding > decay_time) {
+            if (target.definition == 6) target.behavior_state = 1;
+            set_animation_state(target, kAnimationWalk);
+        }
+        if (original_animation_base(source.animation_state) != kAnimationAction) {
+            play_sound(scripts_.sound(L"handy", 2));
+        }
+        source.attached_id = target.id;
+        set_animation_state(source, kAnimationAction);
+    }
+
+    if (source.definition == 12 && target.definition == 2 && source.impulse_y16 == 0 &&
+        source.collision_layer == 0 && source.winding > decay_time) {
+        source.impulse_y16 = -160;
+    }
+    return true;
+}
+
+void Game::apply_contact_effect(Toy& source, Toy& target) {
+    if (!source.active || source.exploding || source.winding <= defaults_.scalar("DecayTime") ||
+        !target.active || target.exploding || target.winding <= 0) {
+        return;
+    }
+    const int source_x16 = static_cast<int>(source.x * 16.0F);
+    const int target_x16 = static_cast<int>(target.x * 16.0F);
+
+    if (source.definition == 0 && target.definition != 9) {
+        source.behavior_state = source.behavior_state == 0 ? 1 : 0;
+        if (source.behavior_state != 0) {
+            source.desired_x16 = 0;
+            source.desired_y16 = 0;
+            set_animation_state(source, kAnimationAction);
         }
     }
 
     if (source.definition == 4 && source.velocity_x16 != 0 &&
         original_target_is_in_front(source.owner, source_x16, target_x16)) {
-        if (target.definition == 4 && source.winding >= target.winding) return;
+        if (!original_kanga_can_punch(
+                target.definition == 4, source.winding, target.winding
+            )) return;
+        const bool entering_action =
+            original_animation_base(source.animation_state) != kAnimationAction;
         target.impulse_x16 = original_kanga_impulse_x16(
             source.owner,
             definitions_[source.definition].parameters.primary_extra(),
             definitions_[source.definition].parameters.mass(),
             definitions_[target.definition].parameters.mass()
         );
-        source.special_state = 15;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
-        play_sound(scripts_.sound(L"kanga", 2));
+        set_animation_state(source, kAnimationAction);
+        if (entering_action) play_sound(scripts_.sound(L"kanga", 2));
     }
 
-    if (source.definition == 6 && source.special_state == 0 &&
-        original_target_is_in_front(source.owner, source_x16, target_x16)) {
-        if (target.definition == 6 && target.winding >= source.winding) return;
-        source.special_state =
-            definitions_[source.definition].parameters.primary_extra();
-        source.velocity_x16 = 0;
-        source.velocity_y16 = 0;
-        source.desired_x16 = 0;
-        source.desired_y16 = 0;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
-        if (target.definition != 5 && target.definition != 13) target.winding = -100;
-        play_sound(scripts_.sound(L"destr", 2));
-    }
-
-    if (source.definition == 9 && target.definition != 3 && target.definition != 13 &&
-        target.winding > defaults_.scalar("DecayTime") && target.special_state != 12) {
-        if (target.definition == 4 && target.owner == source.owner) return;
-        if (target.winding > source.winding) {
-            std::uniform_int_distribution<int> coin(0, 1);
-            if (coin(random_) != 0) return;
-        }
-        reverse_toy(target);
-        target.special_state = 12;
-        target.effect_ticks = animation_duration(target, L"e");
-        target.effect_animation = L"e";
-        source.special_state = 15;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
-        play_sound(scripts_.sound(L"skull", 2));
-    }
-
-    if (source.definition == 10 && source.impulse_y16 == 0 &&
-        source.winding > defaults_.scalar("DecayTime")) {
-        constexpr int margin_pixels = 32;
-        int direction = 0;
-        if (source.y < static_cast<float>(stage_.top + margin_pixels)) {
-            direction = 1;
-        } else if (source.y > static_cast<float>(stage_.bottom - margin_pixels)) {
-            direction = -1;
-        } else {
-            std::uniform_int_distribution<int> coin(0, 1);
-            direction = coin(random_) == 0 ? 1 : -1;
-        }
-        source.special_state = direction * 10;
-        source.impulse_y16 = source.special_state * 16;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
+    if (source.definition == 10 && source.impulse_y16 == 0) {
+        const int margin = board_grid_height(stage_);
+        std::uniform_int_distribution<int> coin(0, 1);
+        source.behavior_state = original_orbit_choose_behavior(
+            static_cast<int>(source.y), stage_.top, stage_.bottom, margin, coin(random_)
+        );
+        set_animation_state(source, kAnimationAction);
         play_sound(scripts_.sound(L"magnt", 2));
     }
+}
 
-    if (source.definition == 11 && target.definition != 9 && target.definition != 11 &&
-        target.definition != 13 && source.winding > defaults_.scalar("DecayTime") &&
-        original_target_is_in_front(source.owner, source_x16, target_x16)) {
-        const int previous = target.winding;
-        target.winding = std::min(
-            defaults_.scalar("GaugeTime"),
-            target.winding + definitions_[source.definition].parameters.primary_extra()
-        );
-        if (previous <= defaults_.scalar("DecayTime") &&
-            target.winding > defaults_.scalar("DecayTime")) {
-            target.special_state = target.definition == 6 ? 1 : 0;
-        }
-        source.special_state = 15;
-        source.effect_ticks = animation_duration(source, L"x");
-        source.effect_animation = L"x";
-        play_sound(scripts_.sound(L"handy", 2));
+void Game::apply_dynamic_special_contact(Toy& source, DynamicObstacle& target) {
+    if (!source.active || source.exploding || source.winding <= defaults_.scalar("DecayTime") ||
+        target.winding <= 0) {
+        return;
     }
+    if (source.definition == 10) {
+        source.impulse_y16 = original_orbit_contact_impulse(
+            source.impulse_y16,
+            source.behavior_state,
+            source.winding,
+            defaults_.scalar("DecayTime")
+        );
+    }
+    if (source.definition == 0) {
+        source.behavior_state = source.behavior_state == 0 ? 1 : 0;
+        if (source.behavior_state != 0) set_animation_state(source, kAnimationAction);
+    }
+    if (source.definition == 4 && source.velocity_x16 != 0 &&
+        original_target_is_in_front(
+            source.owner,
+            static_cast<int>(source.x * 16.0F),
+            static_cast<int>(target.x * 16.0F)
+        )) {
+        const auto archetype = obstacle_archetype(target.code);
+        if (archetype.has_value()) {
+            const bool entering_action =
+                original_animation_base(source.animation_state) != kAnimationAction;
+            target.impulse_x16 = original_kanga_impulse_x16(
+                source.owner,
+                definitions_[source.definition].parameters.primary_extra(),
+                definitions_[source.definition].parameters.mass(),
+                defaults_.toy(archetype->parameters).mass()
+            );
+            set_animation_state(source, kAnimationAction);
+            if (entering_action) play_sound(scripts_.sound(L"kanga", 2));
+        }
+    }
+    if (source.definition == 10 && source.impulse_y16 == 0) {
+        const int margin = board_grid_height(stage_);
+        std::uniform_int_distribution<int> coin(0, 1);
+        source.behavior_state = original_orbit_choose_behavior(
+            static_cast<int>(source.y), stage_.top, stage_.bottom, margin, coin(random_)
+        );
+        set_animation_state(source, kAnimationAction);
+        play_sound(scripts_.sound(L"magnt", 2));
+    }
+}
 
-    if (source.definition == 12 && target.definition == 2 && source.impulse_y16 == 0 &&
-        source.winding > defaults_.scalar("DecayTime")) {
-        source.impulse_y16 = -160;
+void Game::apply_static_special_contact(Toy& source, const ObstacleDefinition& target) {
+    if (!source.active || source.exploding || source.winding <= defaults_.scalar("DecayTime")) {
+        return;
+    }
+    const auto archetype = obstacle_archetype(target.code);
+    if (!archetype.has_value()) return;
+    if (source.definition == 10) {
+        source.impulse_y16 = original_orbit_contact_impulse(
+            source.impulse_y16,
+            source.behavior_state,
+            source.winding,
+            defaults_.scalar("DecayTime")
+        );
+    }
+    if (archetype->interaction != ObstacleInteraction::MotionBlocking) return;
+    if (source.definition == 0) {
+        source.behavior_state = source.behavior_state == 0 ? 1 : 0;
+        if (source.behavior_state != 0) set_animation_state(source, kAnimationAction);
+    }
+    if (source.definition == 10 && source.impulse_y16 == 0) {
+        const int margin = board_grid_height(stage_);
+        std::uniform_int_distribution<int> coin(0, 1);
+        source.behavior_state = original_orbit_choose_behavior(
+            static_cast<int>(source.y), stage_.top, stage_.bottom, margin, coin(random_)
+        );
+        set_animation_state(source, kAnimationAction);
+        play_sound(scripts_.sound(L"magnt", 2));
     }
 }
 
@@ -1424,6 +1593,7 @@ void Game::reverse_toy(Toy& toy) {
     toy.desired_y16 = -toy.desired_y16;
     toy.heading = (toy.heading + 32) & 63;
     toy.owner = 1 - toy.owner;
+    set_animation_state(toy, original_animation_base(toy.animation_state));
 }
 
 void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target) {
@@ -1470,7 +1640,6 @@ void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target
             target.velocity_y16 = 0;
             target.desired_x16 = 0;
             target.desired_y16 = 0;
-            if (target.definition == 1) target.special_state = 1;
             target.winding = -100;
             play_sound(scripts_.sound(L"crak", 1));
             const auto& crack_animation = scripts_.animation(L"crak", L"x");
@@ -1503,8 +1672,7 @@ void Game::apply_surface_contact(const ObstacleDefinition& obstacle, Toy& target
                 const ObstacleDefinition& exit = *exits[exit_roll(random_)];
                 target.x = static_cast<float>(exit.x);
                 target.y = static_cast<float>(exit.y);
-                target.effect_animation = L"x";
-                target.effect_ticks = animation_duration(target, L"x");
+                set_animation_state(target, kAnimationAction);
                 play_sound(scripts_.sound(L"arrow", 3));
             }
             break;
@@ -1555,16 +1723,26 @@ void Game::apply_powerup_pickup(Powerup& powerup, Toy& target) {
     play_sound(scripts_.sound(L"puup", 1));
 
     if (kind == PowerupKind::Rocket) {
+        if (docked_rocket_id_.has_value() && find_toy(*docked_rocket_id_) != nullptr) return;
         const float x = recipient == 0
                             ? static_cast<float>(stage_.left + board_grid_width(stage_) / 2)
                             : static_cast<float>(stage_.right - board_grid_width(stage_) / 2);
-        spawn_toy(
+        if (spawn_toy(
             13,
             recipient,
             x,
             release_y_[static_cast<std::size_t>(recipient)],
             false
-        );
+        )) {
+            Toy& rocket = toys_.back();
+            rocket.rocket_docked = true;
+            rocket.collision_layer = 1;
+            rocket.velocity_x16 = 0;
+            rocket.velocity_y16 = 0;
+            rocket.desired_x16 = 0;
+            rocket.desired_y16 = 0;
+            docked_rocket_id_ = rocket.id;
+        }
     }
 }
 
@@ -1719,10 +1897,17 @@ void Game::advance_duel_tick() {
             ++pending;
         }
     }
+    for (Toy& toy : toys_) {
+        toy.attached_id = 0;
+        if (toy.active) advance_animation(toy);
+        if (toy.rocket_docked) {
+            toy.y = release_y_[static_cast<std::size_t>(toy.owner)];
+        }
+    }
     update_powerups();
     for (DynamicObstacle& obstacle : dynamic_obstacles_) update_dynamic_obstacle(obstacle);
     const auto physical_toy = [](const Toy& toy) {
-        return toy.active && !toy.exploding && toy.winding > 0;
+        return toy.active && !toy.exploding && toy.winding > 0 && toy.collision_layer == 0;
     };
     const std::size_t body_count = toys_.size() + dynamic_obstacles_.size();
     std::set<std::pair<std::uint64_t, std::uint64_t>> current_toy_contacts;
@@ -1752,6 +1937,8 @@ void Game::advance_duel_tick() {
                 const float overlap_y = std::min(toy_box.bottom, obstacle_box.bottom) -
                                         std::max(toy_box.top, obstacle_box.top);
                 if (overlap_x <= 0.0F || overlap_y <= 0.0F) continue;
+
+                apply_static_special_contact(toy, obstacle);
 
                 if (archetype->interaction == ObstacleInteraction::Surface) {
                     apply_surface_contact(obstacle, toy);
@@ -1802,6 +1989,7 @@ void Game::advance_duel_tick() {
                                     std::max(toy_box.top, obstacle_box.top);
             if (overlap_x <= 0.0F || overlap_y <= 0.0F) continue;
 
+            apply_dynamic_special_contact(toy, obstacle);
             apply_dynamic_contact(obstacle, toy);
 
             if (ice_) {
@@ -1919,8 +2107,10 @@ void Game::advance_duel_tick() {
                 const int relative_y = left.velocity_y16 - right.velocity_y16;
                 play_collision_sound(static_cast<int>(std::hypot(relative_x, relative_y)));
             }
-            apply_special_contact(left, right);
-            apply_special_contact(right, left);
+            apply_contact_filter(left, right);
+            apply_contact_filter(right, left);
+            apply_contact_effect(left, right);
+            apply_contact_effect(right, left);
             if (ice_) {
                 CollisionBody left_body{
                     static_cast<int>(left.x * 16.0F),
@@ -2042,6 +2232,235 @@ void Game::advance_duel_tick() {
         }
     }
 
+    struct SmallFrySpawn {
+        int owner = 0;
+        float x = 0.0F;
+        float y = 0.0F;
+    };
+    std::vector<SmallFrySpawn> small_fry_spawns;
+    const int decay_time = defaults_.scalar("DecayTime");
+    const auto ordinary_tick = [this, decay_time](Toy& toy) {
+        const int previous_winding = toy.winding;
+        toy.winding -= definitions_[toy.definition].parameters.vim_decay();
+        if (toy.winding <= 0) {
+            toy.winding = 0;
+            set_animation_state(toy, kAnimationDeath);
+            return;
+        }
+        if (previous_winding > decay_time && toy.winding <= decay_time) {
+            set_animation_state(toy, kAnimationWindDown);
+        }
+        update_desired_motion(toy);
+    };
+    const auto bomby_blast = [this](std::size_t source_index) {
+        Toy& source = toys_[source_index];
+        const int source_x16 = static_cast<int>(source.x * 16.0F);
+        const int source_y16 = static_cast<int>(source.y * 16.0F);
+        const int radius = definitions_[source.definition].parameters.primary_extra();
+        for (Toy& target : toys_) {
+            const BlastTarget blast_target{
+                target.definition + 15,
+                static_cast<int>(target.x * 16.0F),
+                static_cast<int>(target.y * 16.0F),
+                target.winding,
+                target.active && !target.exploding,
+            };
+            target.winding = original_bomby_blast_winding(
+                source_x16, source_y16, radius, blast_target
+            );
+        }
+        source.active = false;
+    };
+    const auto krush_roar = [this](std::size_t source_index) {
+        const Toy& source = toys_[source_index];
+        const int radius = definitions_[source.definition].parameters.secondary_extra();
+        const int source_x16 = static_cast<int>(source.x * 16.0F);
+        const int source_y16 = static_cast<int>(source.y * 16.0F);
+        for (std::size_t target_index = 0; target_index < toys_.size(); ++target_index) {
+            if (target_index == source_index) continue;
+            Toy& target = toys_[target_index];
+            if (!target.active || target.exploding || target.winding <= 0 ||
+                target.definition == 13) {
+                continue;
+            }
+            if (inside_original_radius(
+                    source_x16,
+                    source_y16,
+                    static_cast<int>(target.x * 16.0F),
+                    static_cast<int>(target.y * 16.0F),
+                    radius,
+                    true
+                )) {
+                reverse_toy(target);
+            }
+        }
+    };
+
+    // The original dispatches every type's +68 callback before the common
+    // position pass. This makes Bomby chains and Krush reversals affect all
+    // objects on the same simulation tick.
+    for (std::size_t toy_index = 0; toy_index < toys_.size(); ++toy_index) {
+        Toy& toy = toys_[toy_index];
+        if (!toy.active) continue;
+        if (toy.definition == 1 && toy.winding < 0) {
+            bomby_blast(toy_index);
+            continue;
+        }
+        if (toy.exploding) {
+            if (toy.animation_finished) bomby_blast(toy_index);
+            continue;
+        }
+        if (toy.winding <= 0) {
+            if (toy.definition == 1) {
+                begin_bomby_explosion(toy);
+            } else {
+                toy.active = false;
+            }
+            continue;
+        }
+        if (toy.definition == 2 && toy.winding > decay_time &&
+            toy.behavior_state != 0) {
+            toy.desired_x16 = 0;
+            toy.desired_y16 = 0;
+            if (toy.behavior_state == 1) {
+                if (original_animation_base(toy.animation_state) != kAnimationAction) {
+                    toy.behavior_state = 0;
+                }
+            } else {
+                --toy.behavior_state;
+                if (toy.behavior_state == 1) {
+                    std::uniform_int_distribution<int> egg_roll(0, 99);
+                    const ToyBox box = collision_box(toy);
+                    if (egg_roll(random_) <
+                            definitions_[toy.definition].parameters.secondary_extra() &&
+                        box.left > static_cast<float>(stage_.left) &&
+                        box.right < static_cast<float>(stage_.right)) {
+                        const float direction = toy.owner == 0 ? -1.0F : 1.0F;
+                        small_fry_spawns.push_back({
+                            toy.owner,
+                            toy.x + direction * (box.right - box.left) / 2.0F,
+                            toy.y,
+                        });
+                        set_animation_state(toy, kAnimationAction);
+                    }
+                    toy.velocity_x16 = toy.owner == 0 ? 64 : -64;
+                }
+            }
+            continue;
+        }
+        if (toy.definition == 12 && toy.collision_layer != 0) {
+            if (original_small_fry_should_hatch(
+                    toy.collision_layer, toy.animation_state
+                )) {
+                toy.behavior_state = 1;
+                toy.collision_layer = 0;
+                play_sound(scripts_.sound(L"small", 1));
+            }
+            continue;
+        }
+        if (toy.definition == 13 && toy.rocket_docked) {
+            toy.velocity_x16 = 0;
+            toy.velocity_y16 = 0;
+            toy.impulse_x16 = 0;
+            continue;
+        }
+        if (toy.definition == 13) {
+            const int warned_winding = original_rocket_warning_winding(
+                toy.winding, decay_time, defaults_.scalar("FrameStep")
+            );
+            if (warned_winding != toy.winding) {
+                play_sound(scripts_.sound(L"roket", 2));
+                toy.winding = warned_winding;
+            }
+        }
+        if (toy.definition == 1 && toy.winding < decay_time) {
+            toy.winding = 1;
+        }
+
+        if (toy.definition == 6 && toy.winding > decay_time &&
+            toy.behavior_state > 0 &&
+            original_animation_base(toy.animation_state) != kAnimationAction) {
+            toy.behavior_state = std::max(0, toy.behavior_state - 2);
+            if (toy.behavior_state == 0) set_animation_state(toy, kAnimationAlternate);
+        }
+        if (toy.definition == 7 && toy.winding > decay_time) {
+            const int primary = definitions_[toy.definition].parameters.primary_extra();
+            std::uniform_int_distribution<int> wait_roll(0, std::max(0, primary - 1));
+            const PrestoStep step = original_presto_step(
+                toy.behavior_state,
+                animation_duration(toy, kAnimationAction),
+                primary,
+                wait_roll(random_)
+            );
+            toy.behavior_state = step.behavior_state;
+            if (step.begin_action) {
+                set_animation_state(toy, kAnimationAction);
+                play_sound(scripts_.sound(L"stick", 2));
+            }
+            if (step.jump) {
+                std::uniform_int_distribution<int> lane_roll(0, 4);
+                std::uniform_int_distribution<int> x_roll(
+                    0, std::max(0, board_grid_width(stage_) * 16 - 1)
+                );
+                toy.impulse_y16 = static_cast<int>(
+                    (board_lane_y(lane_roll(random_), stage_) - toy.y) * 16.0F
+                );
+                toy.impulse_x16 = x_roll(random_);
+                if (toy.owner != 0) toy.impulse_x16 = -toy.impulse_x16;
+            }
+        }
+        if (toy.definition == 8 && toy.winding > decay_time) {
+            const KrushStep step = original_krush_step(
+                toy.behavior_state,
+                animation_duration(toy, kAnimationAction),
+                definitions_[toy.definition].parameters.primary_extra()
+            );
+            toy.behavior_state = step.behavior_state;
+            if (step.begin_action) {
+                toy.velocity_x16 = 0;
+                set_animation_state(toy, kAnimationAction);
+            }
+            if (step.play_roar) play_sound(scripts_.sound(L"goril", 3));
+            if (step.reverse_targets) krush_roar(toy_index);
+        }
+        ordinary_tick(toy);
+        if (toy.definition == 2 && toy.winding > decay_time) {
+            std::uniform_int_distribution<int> rest_roll(
+                0, std::max(1, defaults_.scalar("Curved")) - 1
+            );
+            if (rest_roll(random_) == 0) {
+                toy.collision_layer = 0;
+                toy.behavior_state =
+                    definitions_[toy.definition].parameters.primary_extra();
+                toy.velocity_x16 = 0;
+                toy.velocity_y16 = 0;
+                toy.desired_x16 = 0;
+                toy.desired_y16 = 0;
+                set_animation_state(toy, kAnimationWalk);
+            } else {
+                toy.collision_layer = 1;
+                set_animation_state(toy, kAnimationAlternate);
+            }
+        }
+    }
+    for (const SmallFrySpawn& spawn : small_fry_spawns) {
+        const int active_count = static_cast<int>(std::count_if(
+            toys_.begin(), toys_.end(), [](const Toy& toy) { return toy.active; }
+        ));
+        if (active_count >= max_live_objects_) break;
+        Toy small;
+        small.definition = 12;
+        small.owner = spawn.owner;
+        small.x = spawn.x;
+        small.y = spawn.y;
+        small.heading = spawn.owner == 0 ? 0 : 32;
+        small.winding = defaults_.scalar("GaugeTime");
+        small.collision_layer = 1;
+        small.animation_state = kAnimationAction;
+        small.id = next_toy_id_++;
+        toys_.push_back(small);
+    }
+
     for (DynamicObstacle& obstacle : dynamic_obstacles_) {
         const auto archetype = obstacle_archetype(obstacle.code);
         if (!archetype.has_value()) continue;
@@ -2076,27 +2495,19 @@ void Game::advance_duel_tick() {
             }
         }
     }
-
-    struct SmallFrySpawn {
-        int owner = 0;
-        float x = 0.0F;
-        float y = 0.0F;
-    };
-    std::vector<SmallFrySpawn> small_fry_spawns;
-    std::vector<std::size_t> completed_blasts;
-    std::vector<std::size_t> gorilla_roars;
-    const auto integrate_toy = [this](Toy& toy) {
+    for (Toy& toy : toys_) {
+        if (!toy.active || toy.exploding || toy.rocket_docked) continue;
         const int impulse_step = take_original_horizontal_impulse_step(toy.impulse_x16);
         toy.x += static_cast<float>(impulse_step + toy.velocity_x16) / 16.0F;
         toy.y += static_cast<float>(toy.velocity_y16 + toy.impulse_y16) / 16.0F;
         toy.impulse_y16 = 0;
-        ++toy.animation_ticks;
         ToyBox box = collision_box(toy);
         if (box.top < static_cast<float>(stage_.top) ||
             box.bottom > static_cast<float>(stage_.bottom)) {
             toy.velocity_y16 = -toy.velocity_y16;
             toy.desired_y16 = -toy.desired_y16;
             toy.heading = (64 - toy.heading) & 63;
+            set_animation_state(toy, original_animation_base(toy.animation_state));
             if (box.top < static_cast<float>(stage_.top)) {
                 toy.y += static_cast<float>(stage_.top) - box.top;
             } else {
@@ -2113,201 +2524,6 @@ void Game::advance_duel_tick() {
             play_sound(scripts_.sound(L"digit", 2));
             toy.active = false;
         }
-    };
-    for (std::size_t toy_index = 0; toy_index < toys_.size(); ++toy_index) {
-        Toy& toy = toys_[toy_index];
-        if (!toy.active) continue;
-        if (toy.definition == 1 && toy.winding < 0) {
-            // A nearby blast writes -100 to Bomby (segment 10:2025-2028),
-            // deliberately bypassing the normal wind-down animation.
-            completed_blasts.push_back(toy_index);
-            continue;
-        }
-        if (toy.exploding) {
-            ++toy.animation_ticks;
-            if (toy.animation_ticks >= animation_duration(toy, L"d")) {
-                completed_blasts.push_back(toy_index);
-            }
-            continue;
-        }
-        if (toy.winding <= 0) {
-            if (toy.definition == 1) {
-                begin_bomby_explosion(toy);
-            } else {
-                toy.active = false;
-            }
-            continue;
-        }
-        if (toy.definition == 6 && toy.special_state > 0 &&
-            toy.winding > defaults_.scalar("DecayTime")) {
-            toy.special_state = std::max(0, toy.special_state - 2);
-        }
-        if (toy.definition == 7 && toy.winding > defaults_.scalar("DecayTime")) {
-            if (toy.special_state <= 0) {
-                const int jump_time =
-                    definitions_[toy.definition].parameters.primary_extra();
-                std::uniform_int_distribution<int> wait_roll(0, std::max(0, jump_time - 1));
-                toy.special_state = jump_time / 8 + wait_roll(random_);
-            } else {
-                --toy.special_state;
-                if (toy.special_state == 0) {
-                    std::uniform_int_distribution<int> lane_roll(0, 4);
-                    std::uniform_int_distribution<int> x_roll(
-                        0, board_grid_width(stage_) * 16 - 1
-                    );
-                    toy.impulse_y16 =
-                        static_cast<int>(
-                            (board_lane_y(lane_roll(random_), stage_) - toy.y) * 16.0F
-                        );
-                    toy.impulse_x16 = x_roll(random_);
-                    if (toy.owner != 0) toy.impulse_x16 = -toy.impulse_x16;
-                    toy.effect_ticks = animation_duration(toy, L"x");
-                    toy.effect_animation = L"x";
-                    play_sound(scripts_.sound(L"stick", 2));
-                }
-            }
-        }
-        if (toy.definition == 8 && toy.winding > defaults_.scalar("DecayTime")) {
-            if (toy.special_state <= 0) {
-                toy.special_state =
-                    definitions_[toy.definition].parameters.primary_extra();
-            } else {
-                --toy.special_state;
-                if (toy.special_state == 2) {
-                    toy.effect_ticks = animation_duration(toy, L"x");
-                    toy.effect_animation = L"x";
-                    play_sound(scripts_.sound(L"goril", 3));
-                }
-                if (toy.special_state == 0) gorilla_roars.push_back(toy_index);
-            }
-        }
-        if (toy.definition == 10 && toy.impulse_y16 == 0) toy.special_state = 0;
-        if (toy.definition == 2 && toy.winding > defaults_.scalar("DecayTime") &&
-            toy.special_state != 0) {
-            toy.desired_x16 = 0;
-            toy.desired_y16 = 0;
-            if (toy.special_state == 1) {
-                toy.special_state = 0;
-            } else {
-                --toy.special_state;
-                if (toy.special_state == 1) {
-                    std::uniform_int_distribution<int> egg_roll(0, 99);
-                    const ToyBox box = collision_box(toy);
-                    if (egg_roll(random_) <
-                            definitions_[toy.definition].parameters.secondary_extra() &&
-                        box.left > static_cast<float>(stage_.left) &&
-                        box.right < static_cast<float>(stage_.right)) {
-                        const float direction = toy.owner == 0 ? -1.0F : 1.0F;
-                        small_fry_spawns.push_back({
-                            toy.owner,
-                            toy.x + direction * (box.right - box.left) / 2.0F,
-                            toy.y,
-                        });
-                        toy.velocity_x16 = toy.owner == 0 ? 64 : -64;
-                    }
-                }
-            }
-            integrate_toy(toy);
-            continue;
-        }
-        // Bomby's specialized +68 callback forces the last positive value
-        // below DecayTime to one before invoking the common toy callback.
-        if (toy.definition == 1 && toy.winding < defaults_.scalar("DecayTime")) {
-            toy.winding = 1;
-        }
-        const int vim_decay = definitions_[toy.definition].parameters.vim_decay();
-        toy.winding -= vim_decay;
-        if (toy.winding <= 0) {
-            toy.winding = 0;
-            continue;
-        }
-        update_desired_motion(toy);
-        if (toy.effect_ticks > 0) {
-            if (toy.special_state == 15) {
-                toy.desired_x16 = 0;
-                toy.desired_y16 = 0;
-            }
-            --toy.effect_ticks;
-            if (toy.effect_ticks == 0 &&
-                (toy.special_state == 9 || toy.special_state == 12 ||
-                 toy.special_state == 15)) {
-                toy.special_state = 0;
-            }
-            if (toy.effect_ticks == 0) toy.effect_animation.clear();
-        }
-        if (toy.definition == 2 && toy.winding > defaults_.scalar("DecayTime")) {
-            std::uniform_int_distribution<int> rest_roll(
-                0, std::max(1, defaults_.scalar("Curved")) - 1
-            );
-            if (rest_roll(random_) == 0) {
-                toy.special_state =
-                    definitions_[toy.definition].parameters.primary_extra();
-                toy.velocity_x16 = 0;
-                toy.velocity_y16 = 0;
-                toy.desired_x16 = 0;
-                toy.desired_y16 = 0;
-            }
-        }
-        integrate_toy(toy);
-    }
-    for (const SmallFrySpawn& spawn : small_fry_spawns) {
-        const int active_count = static_cast<int>(std::count_if(
-            toys_.begin(), toys_.end(), [](const Toy& toy) { return toy.active; }
-        ));
-        if (active_count >= max_live_objects_) break;
-        Toy small;
-        small.definition = 12;
-        small.owner = spawn.owner;
-        small.x = spawn.x;
-        small.y = spawn.y;
-        small.heading = spawn.owner == 0 ? 0 : 32;
-        small.winding = defaults_.scalar("GaugeTime");
-        small.id = next_toy_id_++;
-        toys_.push_back(small);
-        play_sound(scripts_.sound(L"small", 1));
-    }
-    for (const std::size_t source_index : gorilla_roars) {
-        const Toy& source = toys_[source_index];
-        const int radius = definitions_[source.definition].parameters.secondary_extra();
-        const int source_x16 = static_cast<int>(source.x * 16.0F);
-        const int source_y16 = static_cast<int>(source.y * 16.0F);
-        for (std::size_t target_index = 0; target_index < toys_.size(); ++target_index) {
-            if (target_index == source_index) continue;
-            Toy& target = toys_[target_index];
-            if (!target.active || target.exploding || target.winding <= 0 ||
-                target.definition == 13) {
-                continue;
-            }
-            if (inside_original_radius(
-                    source_x16,
-                    source_y16,
-                    static_cast<int>(target.x * 16.0F),
-                    static_cast<int>(target.y * 16.0F),
-                    radius,
-                    true
-                )) {
-                reverse_toy(target);
-            }
-        }
-    }
-    for (const std::size_t source_index : completed_blasts) {
-        Toy& source = toys_[source_index];
-        const int source_x16 = static_cast<int>(source.x * 16.0F);
-        const int source_y16 = static_cast<int>(source.y * 16.0F);
-        const int radius = definitions_[source.definition].parameters.primary_extra();
-        for (Toy& target : toys_) {
-            const BlastTarget blast_target{
-                target.definition + 15,
-                static_cast<int>(target.x * 16.0F),
-                static_cast<int>(target.y * 16.0F),
-                target.winding,
-                target.active && !target.exploding,
-            };
-            target.winding = original_bomby_blast_winding(
-                source_x16, source_y16, radius, blast_target
-            );
-        }
-        source.active = false;
     }
     toys_.erase(
         std::remove_if(toys_.begin(), toys_.end(), [](const Toy& toy) { return !toy.active; }),
@@ -2540,11 +2756,23 @@ void Game::render_duel(Canvas& canvas) {
     for (const Toy& toy : toys_) {
         const std::filesystem::path sprite_path = sprite_for(toy);
         const Image& sprite = images_.load(sprite_path);
+        float draw_x = toy.x;
+        float draw_y = toy.y;
+        if (toy.definition == 11 && toy.attached_id != 0) {
+            if (const Toy* attached = find_toy(toy.attached_id); attached != nullptr) {
+                const ToyParameters& parameters =
+                    definitions_[attached->definition].parameters;
+                const float direction = toy.owner == 0 ? 1.0F : -1.0F;
+                draw_x = attached->x + direction *
+                    static_cast<float>(parameters.handy_attach_x());
+                draw_y = attached->y + static_cast<float>(parameters.handy_attach_y());
+            }
+        }
         canvas.image(
             sprite,
-            static_cast<int>(toy.x) - sprite.width / 2,
-            static_cast<int>(toy.y) - sprite.height / 2,
-            toy.velocity_x16 < 0
+            static_cast<int>(draw_x) - sprite.width / 2,
+            static_cast<int>(draw_y) - sprite.height / 2,
+            toy.owner != 0
         );
     }
     const Image& arrow = images_.load("sprites/digit/arr_w01.png");

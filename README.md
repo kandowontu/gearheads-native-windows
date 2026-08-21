@@ -52,6 +52,15 @@ surfaces, teleporters, moving obstacles, match rules, toybox selection,
 computer players, 50-level tournament, bonuses, lives, score multipliers,
 champion table, and scripted attract mode.
 
+Each toy now keeps its original independent behavior byte, collision layer,
+directional animation state, frame clock, and Handy attachment pointer. The
+engine dispatches the recovered contact-filter, contact-effect, and per-tick
+callbacks in their original order before the shared position pass. This
+preserves Ziggy toggles, Bomby chains, Clucketta/Small Fry hatching, Zap-bot
+drain, Kangaruffian punches, Disasteroid recovery, Presto jumps, Krush roars,
+Deadhead reversals, Orbit lifts, Handy winding transfers, and the docked Rocket
+release path without one ability overwriting another toy's timer.
+
 The XR sprite converter uses the separately recovered gameplay palette rather
 than the palette embedded in the toybox and background DIBs. It converts the
 original bottom-to-top scanlines to top-to-bottom PNG rows and preserves every
@@ -119,7 +128,8 @@ The test suite validates recovered data counts, every WAV and MIDI reference,
 all WAV headers and sample payloads, all generated asset digests, XR palette
 and scanline conversion, embedded-pack extraction, fixed-step physics, match
 rules, dispatch tables, surfaces, audio cue mappings, powerups, dynamic obstacles,
-tournament behavior, all 281 attract events, champion persistence, fullscreen
+tournament behavior, directional animation aliases, toy callback timing, all
+281 attract events, champion persistence, fullscreen
 switching, and the final PE import table. The import audit permits only Windows
 system libraries; MinGW does not need to be installed on the target PC.
 

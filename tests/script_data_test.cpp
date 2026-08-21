@@ -44,6 +44,15 @@ int main(int argc, char** argv) {
         require(database.sound(L"arrow", 3) == "sounds/fty_spc2.wav", "teleporter exit sound is missing");
         require(database.sound(L"puup", 1) == "sounds/power1.wav", "powerup sound is missing");
         require(database.sound(L"puup", 2) == "sounds/power2.wav", "blocked powerup sound is missing");
+        require(database.animation(L"roach", L"d").front().image ==
+                    database.animation(L"roach", L"e").front().image,
+                "negative animation aliases were not resolved");
+        require(database.animation(L"cluck", L"w").size() == 4,
+                "Clucketta alias walk sequence is incomplete");
+        require(database.animation(L"cluck", L"y").size() == 8,
+                "duplicate late state keys changed Clucketta's primary walk sequence");
+        require(database.animation(L"roket", L"wh").size() == 4,
+                "Rocket horizontal animation is missing");
         std::cout << "validated 34 script sections and " << frame_count
                   << " playable walking frames\n";
         return 0;
