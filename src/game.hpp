@@ -9,6 +9,8 @@
 #include "tournament.hpp"
 #include "attract.hpp"
 #include "champions.hpp"
+#include "cheats.hpp"
+#include "controls.hpp"
 #include "launch_timing.hpp"
 #include "computer_ai.hpp"
 
@@ -160,7 +162,9 @@ private:
     void update_dynamic_obstacle(DynamicObstacle& obstacle);
     void apply_dynamic_contact(DynamicObstacle& obstacle, Toy& target);
     void randomize_toybox(int player);
+    void fill_all_toyboxes();
     void cycle_selected_toy(int player, int direction);
+    void award_score(int player);
     std::filesystem::path sprite_for(const Toy& toy) const;
     ToyBox collision_box(const Toy& toy);
     ToyBox collision_box(const ObstacleDefinition& obstacle);
@@ -188,6 +192,9 @@ private:
     ScriptDatabase scripts_;
     AttractDatabase attracts_;
     ChampionTable champions_;
+    CheatSettings cheats_{};
+    ControlBindings controls_{};
+    std::optional<ControlAction> pending_control_binding_;
     Screen screen_ = Screen::Frontend;
     std::wstring frontend_name_ = L"main";
     int menu_item_ = 0;

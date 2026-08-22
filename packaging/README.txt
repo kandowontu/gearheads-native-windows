@@ -1,4 +1,4 @@
-GEARHEADS NATIVE WINDOWS PORT 1.0.1
+GEARHEADS NATIVE WINDOWS PORT 1.1.0
 ==================================
 
 This is a self-contained 64-bit Windows build. Run Gearheads.exe. You do not
@@ -27,6 +27,16 @@ Left player: W/S lane, A/D toy, F release.
 Escape leaves a duel. Any key leaves an attract demonstration.
 Alt+Enter toggles borderless fullscreen.
 F9 toggles sound effects. F10 toggles music. These choices are saved.
+The main menu Controls screen allows every gameplay action to be rebound.
+Conflicting keys are swapped, defaults can be restored, and bindings are saved.
+
+Cheat menu
+----------
+Press Ctrl+Alt+F1 on the main menu to open the session-only cheat menu. It can
+protect a human from an AI match point, freeze human toy winding, allow instant
+full launches, enable all twelve toys on every level, and start Powerup Party.
+Bonus boards show compact selected-toy badges when All Toys is enabled.
+All cheats default to off each time the executable starts.
 
 Audio diagnostics
 -----------------

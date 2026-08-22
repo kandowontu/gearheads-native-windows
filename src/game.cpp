@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "dynamic_obstacles.hpp"
+#include "hud_layout.hpp"
 #include "match_rules.hpp"
 #include "obstacles.hpp"
 #include "physics.hpp"
@@ -248,7 +249,8 @@ Game::Game(std::filesystem::path asset_root, HWND notification_window)
       attracts_(asset_root_ / "data/anim.dat"),
       champions_(
           asset_root_ / "data/gearhead.ini", application_data_directory() / L"champions.dat"
-      ) {
+      ),
+      controls_(application_data_directory() / L"controls.ini") {
     const auto sound = [this](const std::wstring& section, int ordinal) {
         const std::filesystem::path result = scripts_.sound(section, ordinal);
         if (result.empty()) throw std::runtime_error("Missing recovered script sound");
@@ -311,6 +313,7 @@ void Game::enter_frontend(const std::wstring& name) {
     frontend_name_ = lower(name);
     screen_ = Screen::Frontend;
     frontend_elapsed_ = 0.0;
+    pending_control_binding_.reset();
     if (frontend_name_ == L"9p1_toys" || frontend_name_ == L"9dualtoys") {
         // Both original first-pick screens run the >emptyboxes setup routine.
         toyboxes_[0].clear();
@@ -375,6 +378,36 @@ void Game::activate_frontend(const std::wstring& action) {
         play_sound_alias(action.substr(7));
         return;
     }
+    if (const auto control = control_action_from_command(action); control.has_value()) {
+        pending_control_binding_ = *control;
+        return;
+    }
+    if (action == L">bind$reset") {
+        controls_.reset_defaults();
+        controls_.save();
+        return;
+    }
+    if (const auto cheat = cheat_from_action(action); cheat.has_value()) {
+        cheats_.toggle(*cheat);
+        if (*cheat == Cheat::AllToys) {
+            if (cheats_.all_toys) {
+                fill_all_toyboxes();
+            } else {
+                toyboxes_[0].clear();
+                toyboxes_[1].clear();
+            }
+        }
+        return;
+    }
+    if (action == L">cheat$reset") {
+        const bool had_all_toys = cheats_.all_toys;
+        cheats_.reset();
+        if (had_all_toys) {
+            toyboxes_[0].clear();
+            toyboxes_[1].clear();
+        }
+        return;
+    }
     if (starts_with(action, L">setlevel$") && action.size() > 10) {
         wchar_t theme = towupper(action.back());
         if (theme == L'R') {
@@ -428,6 +461,39 @@ void Game::activate_frontend(const std::wstring& action) {
 
 void Game::update_frontend(double seconds, const InputState& input) {
     frontend_elapsed_ += std::max(0.0, seconds);
+    if (frontend_name_ == L"controls" && pending_control_binding_.has_value()) {
+        if (pressed(input, VK_ESCAPE)) {
+            pending_control_binding_.reset();
+            return;
+        }
+        for (int key = 1; key < static_cast<int>(input.pressed.size()); ++key) {
+            if (!pressed(input, key)) continue;
+            if (!bindable_virtual_key(key)) {
+                return;
+            }
+            const ControlAction action = *pending_control_binding_;
+            controls_.rebind(action, key);
+            controls_.save();
+            pending_control_binding_.reset();
+            play_sound_alias(L"oksound");
+            return;
+        }
+        return;
+    }
+    const bool control_held = input.held[VK_CONTROL] || input.held[VK_LCONTROL] ||
+                              input.held[VK_RCONTROL];
+    const bool alt_held = input.held[VK_MENU] || input.held[VK_LMENU] ||
+                          input.held[VK_RMENU];
+    if (cheat_menu_chord(
+            frontend_name_ == L"main",
+            pressed(input, VK_F1),
+            control_held,
+            alt_held
+        )) {
+        play_sound_alias(L"oksound");
+        enter_frontend(L"cheats");
+        return;
+    }
     const ScreenDefinition* definition = screens_.find(frontend_name_);
     if (frontend_name_ == L"n1_victory") {
         if (pressed(input, VK_BACK) && !entered_name_.empty()) entered_name_.pop_back();
@@ -642,6 +708,7 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
     powerup_effect_ticks_ = {0, 0};
     last_powerup_owner_ = -1;
     score_ = {0, 0};
+    if (cheats_.all_toys && mode != DuelMode::Attract) fill_all_toyboxes();
     for (int player = 0; player < 2; ++player) {
         if (toyboxes_[static_cast<std::size_t>(player)].empty()) randomize_toybox(player);
         selected_toy_[static_cast<std::size_t>(player)] =
@@ -709,6 +776,40 @@ void Game::randomize_toybox(int player) {
     selected_toy_[static_cast<std::size_t>(player)] = toybox.front();
 }
 
+void Game::fill_all_toyboxes() {
+    toybox_size_ = static_cast<int>(kPlayableToyCount);
+    for (int player = 0; player < 2; ++player) {
+        auto& toybox = toyboxes_[static_cast<std::size_t>(player)];
+        toybox.resize(kPlayableToyCount);
+        for (std::size_t index = 0; index < toybox.size(); ++index) {
+            toybox[index] = static_cast<int>(index);
+        }
+        if (selected_toy_[static_cast<std::size_t>(player)] < 0 ||
+            selected_toy_[static_cast<std::size_t>(player)] >=
+                static_cast<int>(kPlayableToyCount)) {
+            selected_toy_[static_cast<std::size_t>(player)] = 0;
+        }
+    }
+}
+
+void Game::award_score(int player) {
+    if (player < 0 || player > 1) return;
+    std::array<int, 2> candidate = score_;
+    ++candidate[static_cast<std::size_t>(player)];
+    const int candidate_winner = original_match_winner(
+        candidate[0], candidate[1], defaults_.scalar("Winningscore")
+    );
+    if (cheat_blocks_match_point(
+            cheats_.never_lose, player, candidate_winner, computer_controlled_
+        )) {
+        audio_notice_ = L"NEVER LOSE blocked the computer's match point";
+        audio_notice_seconds_ = 2.0;
+        return;
+    }
+    score_ = candidate;
+    play_sound(scripts_.sound(L"digit", player + 1));
+}
+
 void Game::cycle_selected_toy(int player, int direction) {
     const auto& toybox = toyboxes_[static_cast<std::size_t>(player)];
     if (toybox.empty()) return;
@@ -725,7 +826,11 @@ void Game::cycle_selected_toy(int player, int direction) {
     if (selected_toy_[static_cast<std::size_t>(player)] != previous) {
         play_sound(scripts_.sound(L"arrow", 1));
     }
-    if (defaults_.scalar("Resetimeonpick") != 0) {
+    if (defaults_.scalar("Resetimeonpick") != 0 &&
+        !human_cheat_applies(
+            cheats_.instant_launch,
+            computer_controlled_[static_cast<std::size_t>(player)]
+        )) {
         launch_gauges_[static_cast<std::size_t>(player)].reset_after_launch(
             defaults_.scalar("DecayTime")
         );
@@ -765,11 +870,20 @@ bool Game::release_toy(int player) {
     const int gauge_time = defaults_.scalar("GaugeTime");
     const int decay_time = defaults_.scalar("DecayTime");
     LaunchGauge& gauge = launch_gauges_[static_cast<std::size_t>(player)];
-    if (!gauge.ready(decay_time, gauge_time)) {
+    const bool instant_launch = human_cheat_applies(
+        cheats_.instant_launch,
+        computer_controlled_[static_cast<std::size_t>(player)]
+    );
+    if (!instant_launch && !gauge.ready(decay_time, gauge_time)) {
         play_sound(scripts_.sound(L"arrow", 2));
         return false;
     }
-    const int winding = gauge.winding(gauge_time);
+    const int winding = cheat_launch_winding(
+        cheats_.instant_launch,
+        computer_controlled_[static_cast<std::size_t>(player)],
+        gauge.winding(gauge_time),
+        gauge_time
+    );
 
     const int selected_lane = board_lane(
         release_y_[static_cast<std::size_t>(player)], stage_
@@ -790,7 +904,13 @@ bool Game::release_toy(int player) {
         launched = true;
         first = false;
     }
-    if (launched) gauge.reset_after_launch(decay_time);
+    if (launched) {
+        if (instant_launch) {
+            gauge.begin_match(gauge_time);
+        } else {
+            gauge.reset_after_launch(decay_time);
+        }
+    }
     return launched;
 }
 
@@ -893,34 +1013,42 @@ void Game::update_duel(double seconds, const InputState& input) {
     }
 
     if (!computer_controlled_[0]) {
-        if (pressed(input, 'W')) {
+        if (controls_.pressed(ControlAction::LeftLaneUp, input.pressed)) {
             const float previous = release_y_[0];
             release_y_[0] = move_release(release_y_[0], -1, stage_);
             if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (pressed(input, 'S')) {
+        if (controls_.pressed(ControlAction::LeftLaneDown, input.pressed)) {
             const float previous = release_y_[0];
             release_y_[0] = move_release(release_y_[0], 1, stage_);
             if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (pressed(input, 'A')) cycle_selected_toy(0, -1);
-        if (pressed(input, 'D')) cycle_selected_toy(0, 1);
-        if (pressed(input, 'F')) release_toy(0);
+        if (controls_.pressed(ControlAction::LeftToyPrevious, input.pressed)) {
+            cycle_selected_toy(0, -1);
+        }
+        if (controls_.pressed(ControlAction::LeftToyNext, input.pressed)) {
+            cycle_selected_toy(0, 1);
+        }
+        if (controls_.pressed(ControlAction::LeftRelease, input.pressed)) release_toy(0);
     }
     if (!computer_controlled_[1]) {
-        if (pressed(input, VK_UP)) {
+        if (controls_.pressed(ControlAction::RightLaneUp, input.pressed)) {
             const float previous = release_y_[1];
             release_y_[1] = move_release(release_y_[1], -1, stage_);
             if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (pressed(input, VK_DOWN)) {
+        if (controls_.pressed(ControlAction::RightLaneDown, input.pressed)) {
             const float previous = release_y_[1];
             release_y_[1] = move_release(release_y_[1], 1, stage_);
             if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (pressed(input, VK_LEFT)) cycle_selected_toy(1, -1);
-        if (pressed(input, VK_RIGHT)) cycle_selected_toy(1, 1);
-        if (pressed(input, VK_RETURN) || pressed(input, VK_SPACE)) release_toy(1);
+        if (controls_.pressed(ControlAction::RightToyPrevious, input.pressed)) {
+            cycle_selected_toy(1, -1);
+        }
+        if (controls_.pressed(ControlAction::RightToyNext, input.pressed)) {
+            cycle_selected_toy(1, 1);
+        }
+        if (controls_.pressed(ControlAction::RightRelease, input.pressed)) release_toy(1);
     }
 
     for (int player = 0; player < 2; ++player) {
@@ -1717,7 +1845,10 @@ void Game::apply_powerup_pickup(Powerup& powerup, Toy& target) {
     powerup_effect_[static_cast<std::size_t>(recipient)] = powerup.kind;
     powerup_effect_ticks_[static_cast<std::size_t>(recipient)] = std::max(
         1,
-        original_powerup_random_bound(15, defaults_.scalar("FrameStep"))
+        original_powerup_random_bound(
+            cheat_powerup_seconds(cheats_.powerup_party, 15, 5),
+            defaults_.scalar("FrameStep")
+        )
     );
     powerup.active = false;
     play_sound(scripts_.sound(L"puup", 1));
@@ -1769,8 +1900,10 @@ void Game::update_powerups() {
         if (!powerup_->active) powerup_.reset();
     }
 
-    if (powerup_.has_value() || !powerups_enabled_ || active_level_ == nullptr ||
-        active_level_->powerup_probability <= 0 || powerup_effect_[0] != 0 ||
+    if (powerup_.has_value() || (!powerups_enabled_ && !cheats_.powerup_party) ||
+        active_level_ == nullptr ||
+        (!cheats_.powerup_party && active_level_->powerup_probability <= 0) ||
+        powerup_effect_[0] != 0 ||
         powerup_effect_[1] != 0) {
         return;
     }
@@ -1780,7 +1913,10 @@ void Game::update_powerups() {
     if (rocket_active) return;
 
     const int bound = original_powerup_random_bound(
-        active_level_->powerup_probability, defaults_.scalar("FrameStep")
+        cheat_powerup_seconds(
+            cheats_.powerup_party, active_level_->powerup_probability, 3
+        ),
+        defaults_.scalar("FrameStep")
     );
     if (bound <= 0) return;
     std::uniform_int_distribution<int> spawn_roll(0, bound - 1);
@@ -2240,6 +2376,13 @@ void Game::advance_duel_tick() {
     std::vector<SmallFrySpawn> small_fry_spawns;
     const int decay_time = defaults_.scalar("DecayTime");
     const auto ordinary_tick = [this, decay_time](Toy& toy) {
+        if (human_cheat_applies(
+                cheats_.infinite_winding,
+                computer_controlled_[static_cast<std::size_t>(toy.owner)]
+            )) {
+            update_desired_motion(toy);
+            return;
+        }
         const int previous_winding = toy.winding;
         toy.winding -= definitions_[toy.definition].parameters.vim_decay();
         if (toy.winding <= 0) {
@@ -2516,12 +2659,10 @@ void Game::advance_duel_tick() {
         }
         box = collision_box(toy);
         if (box.left > static_cast<float>(stage_.right)) {
-            ++score_[0];
-            play_sound(scripts_.sound(L"digit", 1));
+            award_score(0);
             toy.active = false;
         } else if (box.right < static_cast<float>(stage_.left)) {
-            ++score_[1];
-            play_sound(scripts_.sound(L"digit", 2));
+            award_score(1);
             toy.active = false;
         }
     }
@@ -2616,6 +2757,22 @@ void Game::render_frontend(Canvas& canvas) {
         if (frontend_name_ == L"n1_victory" && command.arguments[3] == L"#00") {
             display_text = entered_name_.empty() ? L"_" : entered_name_ + L"_";
         }
+        if (frontend_name_ == L"cheats") {
+            if (const auto cheat = cheat_from_action(command_action(command));
+                cheat.has_value()) {
+                display_text += cheats_.enabled(*cheat) ? L"  [ON]" : L"  [OFF]";
+            }
+        }
+        if (frontend_name_ == L"controls") {
+            if (const auto control = control_action_from_command(command_action(command));
+                control.has_value()) {
+                if (pending_control_binding_ == control) {
+                    display_text += L"  [PRESS A KEY]";
+                } else {
+                    display_text += L"  [" + controls_.binding_text(*control) + L"]";
+                }
+            }
+        }
         canvas.text(
             display_text,
             number(command.arguments[0], command.source_line),
@@ -2629,6 +2786,11 @@ void Game::render_frontend(Canvas& canvas) {
             alignment,
             &command == selected
         );
+    }
+    if (frontend_name_ == L"controls" && pending_control_binding_.has_value()) {
+        canvas.fill_rect(48, 78, 544, 30, RGB(0, 0, 0));
+        canvas.frame_rect(48, 78, 544, 30, kGreen, 1);
+        canvas.text(L"Press one key to assign it; Escape cancels", 320, 84, 17, kCream, 1);
     }
     if (frontend_name_ == L"n1_start" && tournament_active_) {
         canvas.text(
@@ -2678,7 +2840,10 @@ void Game::render_duel(Canvas& canvas) {
         for (int player = 0; player < 2; ++player) {
             const Rectangle& rectangle = rectangles[static_cast<std::size_t>(player)];
             if (!valid_rectangle(rectangle)) continue;
-            const int charge = launch_gauges_[static_cast<std::size_t>(player)].winding(
+            const int charge = cheat_launch_winding(
+                cheats_.instant_launch,
+                computer_controlled_[static_cast<std::size_t>(player)],
+                launch_gauges_[static_cast<std::size_t>(player)].winding(gauge_time),
                 gauge_time
             );
             const int frame = std::clamp(charge * 36 / std::max(1, gauge_time), 0, 35) + 1;
@@ -2695,6 +2860,10 @@ void Game::render_duel(Canvas& canvas) {
             );
         }
     }
+    std::array<Rectangle, 2> fallback_toy_previews{{
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+    }};
     if (active_level_ != nullptr) {
         const std::array<Rectangle, 2> rectangles{
             active_level_->left_toybox,
@@ -2703,6 +2872,12 @@ void Game::render_duel(Canvas& canvas) {
         for (int player = 0; player < 2; ++player) {
             const Rectangle& rectangle = rectangles[static_cast<std::size_t>(player)];
             const int definition_index = selected_toy_[static_cast<std::size_t>(player)];
+            if (needs_fallback_toy_preview(
+                    rectangle, toyboxes_[static_cast<std::size_t>(player)].size()
+                )) {
+                fallback_toy_previews[static_cast<std::size_t>(player)] =
+                    fallback_toy_preview_rectangle(*active_level_, player);
+            }
             if (!valid_rectangle(rectangle) || definition_index < 0 ||
                 definition_index >= static_cast<int>(definitions_.size())) {
                 continue;
@@ -2773,6 +2948,50 @@ void Game::render_duel(Canvas& canvas) {
             static_cast<int>(draw_x) - sprite.width / 2,
             static_cast<int>(draw_y) - sprite.height / 2,
             toy.owner != 0
+        );
+    }
+    for (int player = 0; player < 2; ++player) {
+        const Rectangle& rectangle =
+            fallback_toy_previews[static_cast<std::size_t>(player)];
+        const int definition_index = selected_toy_[static_cast<std::size_t>(player)];
+        if (!valid_rectangle(rectangle) || definition_index < 0 ||
+            definition_index >= static_cast<int>(definitions_.size())) {
+            continue;
+        }
+        const Image& image = images_.load(
+            definitions_[static_cast<std::size_t>(definition_index)].sprite
+        );
+        constexpr int kPanelPadding = 5;
+        constexpr int kLabelHeight = 17;
+        const int panel_width = rectangle.right - rectangle.left;
+        const int panel_height = rectangle.bottom - rectangle.top;
+        const int available_width = panel_width - kPanelPadding * 2;
+        const int available_height = panel_height - kLabelHeight - kPanelPadding;
+        const double scale = std::min(
+            static_cast<double>(available_width) / std::max(1, image.width),
+            static_cast<double>(available_height) / std::max(1, image.height)
+        );
+        const int image_width = std::max(1, static_cast<int>(std::lround(image.width * scale)));
+        const int image_height = std::max(1, static_cast<int>(std::lround(image.height * scale)));
+        const COLORREF border = player == 0 ? kBlue : kGreen;
+        canvas.fill_rect(rectangle.left, rectangle.top, panel_width, panel_height, RGB(0, 0, 51));
+        canvas.frame_rect(rectangle.left, rectangle.top, panel_width, panel_height, border, 2);
+        canvas.text(
+            player == 0 ? L"P1 TOY" : L"P2 TOY",
+            (rectangle.left + rectangle.right) / 2,
+            rectangle.top + 2,
+            13,
+            kCream,
+            1
+        );
+        canvas.image_scaled(
+            image,
+            (rectangle.left + rectangle.right - image_width) / 2,
+            rectangle.top + kLabelHeight +
+                (available_height - image_height) / 2,
+            image_width,
+            image_height,
+            player == 1
         );
     }
     const Image& arrow = images_.load("sprites/digit/arr_w01.png");

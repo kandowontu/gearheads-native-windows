@@ -55,6 +55,14 @@ public:
     void fill_rect(int x, int y, int width, int height, COLORREF color);
     void frame_rect(int x, int y, int width, int height, COLORREF color, int thickness = 1);
     void image(const Image& source, int x, int y, bool mirror_x = false);
+    void image_scaled(
+        const Image& source,
+        int x,
+        int y,
+        int width,
+        int height,
+        bool mirror_x = false
+    );
     void image_region(
         const Image& source,
         int x,

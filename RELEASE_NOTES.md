@@ -1,59 +1,60 @@
-# Gearheads Native Windows Port 1.0.1
+# Gearheads Native Windows Port 1.1.0
 
-Release date: 2026-08-20
+Release date: 2026-08-21
 
-This maintenance release repairs the native audio path and restores the
-audited per-toy behavior, interaction, animation, and callback timing while
-preserving the self-contained Windows executable.
+Version 1.1 adds optional gameplay cheats, fully configurable keyboard
+controls, and a selected-toy HUD for bonus boards when their normally fixed
+rosters are expanded. It retains the audited gameplay, audio, palette,
+orientation, timing, fullscreen, and self-contained-runtime repairs from
+version 1.0.1.
 
-## Audio repairs
+## Configurable controls
 
-- Replaced the single-channel `PlaySound` path with a 64-voice DirectSound
-  mixer, so launches, impacts, abilities, scoring, and interface cues can
-  overlap.
-- Replaced the unsupported MCI `repeat` command with notified playback and an
-  explicit restart at track completion. Legacy MCI path handling now uses a
-  compatible short path for the content-addressed cache.
-- Wired cue selection to the recovered script and `[sound]` tables: light,
-  medium, and heavy collisions; both scoring sides; all crack phases;
-  teleporter entry and exit; selection, countdown, go, logo, menu, perfect,
-  tournament score, game-over, win, and loss cues are now reachable.
-- Corrected result audio so one-player and tournament losses no longer play the
-  win sting. Frontend music is restored after a duel and level music remains
-  selected from the level's recovered track list.
-- Added F9 sound-effects and F10 music toggles with persistent settings and
-  on-screen confirmation.
-- Added `%LOCALAPPDATA%\Gearheads Native\audio.log` diagnostics and graceful
-  fallback when an effects device or MIDI mapper is unavailable.
-- Added validation for all 47 PCM effects, all 19 MIDI references, recovered
-  cue mappings, and the DirectSound system-library import.
+- Replaced the static Controls page with an interactive ten-action binding
+  screen covering lane selection, toy selection, and release for both sides.
+- Added single-key capture with Escape cancellation and live binding labels.
+- Conflicting assignments swap automatically instead of activating two
+  gameplay actions at once.
+- Added Reset Default Controls, including the original Enter/Space dual release
+  binding for the right player.
+- Saved custom bindings to `%LOCALAPPDATA%\Gearheads Native\controls.ini` and
+  restored them on later launches.
+- Kept menu navigation, Escape, Alt+Enter, F9, and F10 fixed so custom gameplay
+  bindings cannot lock the player out of navigation, fullscreen, or audio
+  controls.
 
-## Existing 1.0 guarantees
+## Cheat menu
 
-- One self-contained 64-bit `Gearheads.exe`; no original CD, VHD, installer,
-  executable, DLL, archive, or external asset folder is required.
-- Alt+Enter borderless fullscreen with 4:3 letterboxing.
-- Correct gameplay sprite palette and orientation, per-toy launch timing, and
-  synchronized double-buffered presentation without black-frame flicker.
+- Added a hidden, session-only menu opened with Ctrl+Alt+F1 on the main menu.
+  All cheat settings start disabled on every launch.
+- Added Never Lose vs Computer, which blocks an AI match-winning point without
+  changing ordinary scoring.
+- Added Infinite Toy Wind-Up for human-owned toys.
+- Added Instant Full Launch, allowing immediate releases at maximum winding
+  while leaving computer timing unchanged.
+- Added All Toys Everywhere, expanding both rosters to all twelve selectable
+  toys even on tournament levels with fixed rosters.
+- Added Powerup Party, enabling powerups on every board with faster spawn and
+  effect timing.
+- Added Reset All Cheats and live ON/OFF indicators.
 
-## Gameplay behavior repairs
+## Bonus-level HUD
 
-- Separated each object's behavior byte, collision layer, animation state,
-  animation clock, and attachment pointer so contacts cannot corrupt ability
-  timers or animation playback.
-- Ported the distinct `+60` contact filters, `+64` contact effects, `+68` tick
-  callbacks, and Bomby expiry callback for all twelve selectable toys plus
-  Small Fry and Rocket.
-- Restored directional animation-state selection and negative SCRIPT frame
-  aliases, with animation clocks reset only when the resolved state changes.
-- Restored same-tick Bomby chain blasts and Krush reversals by running all toy
-  callbacks before the common position pass.
-- Restored Clucketta's collision/rest/egg cycle, delayed Small Fry hatching,
-  Handy attachment offsets, persistent Orbit direction, and Rocket's docked
-  powerup/release/warning lifecycle.
-- Added executable tests for animation mapping and Presto/Krush phase timing;
-  the complete 26-test suite also revalidates embedded assets, audio,
-  fullscreen switching, and the self-contained PE import surface.
+- Added compact P1/P2 selected-toy badges when a board has no original toybox
+  rectangle but a cheat or future mode supplies multiple selectable toys.
+- Scaled the original gameplay sprites into the badges without changing their
+  recovered palette or orientation.
+- Tested badge placement against all twelve original bonus boards so the HUD
+  avoids their recovered wind-up gauge positions.
+- Preserved the original hidden preview when a bonus level still has its normal
+  forced single-toy roster.
 
-The executable is unsigned. Verify it with the supplied SHA-256 values before
-bypassing any SmartScreen warning.
+## Packaging and verification
+
+- The release remains one self-contained 64-bit `Gearheads.exe`; it requires no
+  original CD, VHD, installer, executable, DLL, archive, or adjacent assets.
+- Expanded the automated suite to 29 tests, adding cheat-rule, control-binding
+  persistence/conflict, and all-bonus HUD-layout coverage while retaining the
+  embedded-asset, PE-import, and fullscreen checks.
+- The executable is unsigned. Verify it with the supplied SHA-256 values before
+  bypassing any SmartScreen warning.

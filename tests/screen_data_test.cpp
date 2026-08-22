@@ -23,14 +23,14 @@ int main(int argc, char** argv) {
     try {
         if (argc != 2) throw std::runtime_error("expected screens.ini path");
         const gh::ScreenDatabase database{std::filesystem::path(argv[1])};
-        require(database.size() == 35, "expected all 35 original screens");
+        require(database.size() == 37, "expected 35 recovered and 2 native screens");
 
         const gh::ScreenDefinition* main = database.find(L"MAIN");
         require(main != nullptr, "main screen is missing or lookup is case-sensitive");
         const auto main_items = std::count_if(
             main->commands.begin(), main->commands.end(), interactive
         );
-        require(main_items == 5, "main screen should expose five selectable items");
+        require(main_items == 6, "main screen should expose six selectable items");
         require(
             std::any_of(main->commands.begin(), main->commands.end(), [](const auto& command) {
                 return std::find(
@@ -49,6 +49,30 @@ int main(int argc, char** argv) {
                 return command.key == L"dtext1";
             }) == 2,
             "duplicate ordered dtext1 commands were not preserved"
+        );
+
+        const gh::ScreenDefinition* controls = database.find(L"controls");
+        require(controls != nullptr, "native controls screen is missing");
+        require(
+            std::count_if(
+                controls->commands.begin(), controls->commands.end(), interactive
+            ) == 12,
+            "controls screen should expose ten bindings, reset, and back"
+        );
+        require(std::any_of(
+                    controls->commands.begin(), controls->commands.end(), [](const auto& command) {
+                        return std::find(command.arguments.begin(), command.arguments.end(),
+                                         L">bind$right_release") != command.arguments.end();
+                    }),
+                "right-player release binding is missing");
+
+        const gh::ScreenDefinition* cheats = database.find(L"cheats");
+        require(cheats != nullptr, "hidden cheat screen is missing");
+        require(
+            std::count_if(
+                cheats->commands.begin(), cheats->commands.end(), interactive
+            ) == 7,
+            "cheat screen should expose five toggles, reset, and back"
         );
 
         const gh::ScreenDefinition* staff = database.find(L"staff");
@@ -71,7 +95,7 @@ int main(int argc, char** argv) {
 
         std::set<std::wstring> transition_targets;
         for (const std::wstring section : {
-                 L"main", L"help", L"p1_start", L"9p1_toys", L"dual", L"9dualtoys",
+                 L"main", L"help", L"controls", L"cheats", L"p1_start", L"9p1_toys", L"dual", L"9dualtoys",
                  L"9play2toys", L"n1_option", L"n1_start", L"staff"
              }) {
             const gh::ScreenDefinition* screen = database.find(section);
@@ -87,7 +111,7 @@ int main(int argc, char** argv) {
         for (const std::wstring& target : transition_targets) {
             require(database.find(target) != nullptr, "a screen transition has no target section");
         }
-        std::cout << "validated 35 screens, duplicate commands, Unicode, and transition targets\n";
+        std::cout << "validated 37 screens, duplicate commands, Unicode, and transition targets\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

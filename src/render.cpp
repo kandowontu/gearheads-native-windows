@@ -240,6 +240,49 @@ void Canvas::image(const Image& source, int x, int y, bool mirror_x) {
     }
 }
 
+void Canvas::image_scaled(
+    const Image& source,
+    int x,
+    int y,
+    int width,
+    int height,
+    bool mirror_x
+) {
+    if (source.width <= 0 || source.height <= 0 || width <= 0 || height <= 0) return;
+    synchronize_gdi();
+    for (int dy_offset = 0; dy_offset < height; ++dy_offset) {
+        const int dy = y + dy_offset;
+        if (dy < 0 || dy >= kCanvasHeight) continue;
+        const int source_y = dy_offset * source.height / height;
+        for (int dx_offset = 0; dx_offset < width; ++dx_offset) {
+            const int dx = x + dx_offset;
+            if (dx < 0 || dx >= kCanvasWidth) continue;
+            int source_x = dx_offset * source.width / width;
+            if (mirror_x) source_x = source.width - 1 - source_x;
+            const std::uint32_t pixel = source.pixels[
+                static_cast<std::size_t>(source_y) * source.width + source_x
+            ];
+            const unsigned alpha = pixel >> 24U;
+            if (alpha == 0) continue;
+            std::uint32_t& destination = pixels_[dy * kCanvasWidth + dx];
+            if (alpha == 255) {
+                destination = pixel & 0x00ffffffU;
+                continue;
+            }
+            const unsigned inverse = 255U - alpha;
+            const unsigned source_blue = pixel & 0xffU;
+            const unsigned source_green = pixel >> 8U & 0xffU;
+            const unsigned source_red = pixel >> 16U & 0xffU;
+            const unsigned dest_blue = destination & 0xffU;
+            const unsigned dest_green = destination >> 8U & 0xffU;
+            const unsigned dest_red = destination >> 16U & 0xffU;
+            destination = ((source_red * alpha + dest_red * inverse + 127U) / 255U) << 16U |
+                          ((source_green * alpha + dest_green * inverse + 127U) / 255U) << 8U |
+                          ((source_blue * alpha + dest_blue * inverse + 127U) / 255U);
+        }
+    }
+}
+
 void Canvas::image_region(
     const Image& source,
     int x,

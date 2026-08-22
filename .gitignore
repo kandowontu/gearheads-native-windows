@@ -4,6 +4,7 @@
 # Generated reverse-engineering output.
 /analysis/generated/
 /build/
+/build-*/
 /dist/
 /release/
 

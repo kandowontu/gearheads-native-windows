@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(GearheadsNative VERSION 1.0.1 LANGUAGES CXX RC)
+project(GearheadsNative VERSION 1.1.0 LANGUAGES CXX RC)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -47,6 +47,9 @@ add_executable(gearheads WIN32
     src/tournament.cpp
     src/attract.cpp
     src/champions.cpp
+    src/cheats.cpp
+    src/controls.cpp
+    src/hud_layout.cpp
     src/launch_timing.cpp
     src/computer_ai.cpp
     src/game.cpp
@@ -286,6 +289,37 @@ if(BUILD_TESTING)
     add_test(
         NAME champions
         COMMAND champions_test "${CMAKE_SOURCE_DIR}/assets/data/gearhead.ini"
+    )
+    add_executable(cheats_test
+        tests/cheats_test.cpp
+        src/cheats.cpp
+    )
+    target_compile_features(cheats_test PRIVATE cxx_std_20)
+    target_include_directories(cheats_test PRIVATE src)
+    add_test(NAME cheats COMMAND cheats_test)
+    add_executable(controls_test
+        tests/controls_test.cpp
+        src/controls.cpp
+    )
+    target_compile_features(controls_test PRIVATE cxx_std_20)
+    target_compile_definitions(controls_test PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_include_directories(controls_test PRIVATE src)
+    target_link_libraries(controls_test PRIVATE user32)
+    add_test(
+        NAME controls
+        COMMAND controls_test "${CMAKE_BINARY_DIR}/controls-test"
+    )
+    add_executable(hud_layout_test
+        tests/hud_layout_test.cpp
+        src/hud_layout.cpp
+        src/levels.cpp
+    )
+    target_compile_features(hud_layout_test PRIVATE cxx_std_20)
+    target_compile_definitions(hud_layout_test PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_include_directories(hud_layout_test PRIVATE src)
+    add_test(
+        NAME hud_layout
+        COMMAND hud_layout_test "${CMAKE_SOURCE_DIR}/assets/data/gearhead.ini"
     )
     add_test(
         NAME native_imports

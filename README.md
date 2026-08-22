@@ -1,7 +1,7 @@
-# Gearheads Native Windows Port 1.0.1
+# Gearheads Native Windows Port 1.1.0
 
 Gearheads Native is a preservation-oriented, native Windows reimplementation
-of the 1996 toy-battle game. Version 1.0.1 runs without the original CD, disk
+of the 1996 toy-battle game. Version 1.1.0 runs without the original CD, disk
 image, installer, executable, DLLs, or separately supplied game assets.
 
 The release is a single 64-bit `Gearheads.exe`. Its verified converted runtime
@@ -13,7 +13,7 @@ recreated from the EXE. Champion-table updates are stored separately under
 
 ## Download and run
 
-1. Extract the v1.0.1 release ZIP, or copy `Gearheads.exe` by itself.
+1. Extract the v1.1.0 release ZIP, or copy `Gearheads.exe` by itself.
 2. Run `Gearheads.exe`. No installation or compatibility mode is required.
 3. If Windows SmartScreen warns about the unsigned executable, inspect its
    SHA-256 value against `SHA256SUMS.txt` before choosing to run it.
@@ -37,13 +37,38 @@ not prevent the game from running.
   with black letterboxing rather than distorted.
 - F9 toggles sound effects; F10 toggles music. Both choices are saved under
   `%LOCALAPPDATA%\Gearheads Native`, and an on-screen notice confirms changes.
+- The main menu now has a dedicated Controls screen containing the complete
+  native keyboard layout. Select any gameplay action and press a replacement
+  key to rebind it; conflicting assignments are swapped, defaults can be
+  restored, and custom controls are saved between launches.
 
-## What version 1.0.1 preserves
+## Cheat menu
 
-The native engine reads all 35 recovered screen sections, 105 level sections,
-34 object scripts, 51 executable defaults, and 14 timed `ANIM.DAT`
-demonstrations. Its embedded set contains 689 converted sprites, 17 boards, 11
-UI images, 47 sounds, 19 MIDI tracks, and the original game font.
+Press Ctrl+Alt+F1 while the main menu is visible to open the session-only cheat
+menu. Its toggles are disabled on every fresh launch:
+
+- Never Lose vs Computer blocks an AI match-winning point while a human player
+  is still in the match.
+- Infinite Toy Wind-Up stops natural winding decay for human-owned toys.
+- Instant Full Launch lets human players release fully wound toys without
+  waiting for the launch gauge.
+- All Toys Everywhere supplies both sides with the complete twelve-toy roster,
+  including tournament levels that normally override a toybox. Bonus boards
+  add compact selected-toy badges when this cheat makes their hidden rosters
+  selectable.
+- Powerup Party enables powerups on every board and shortens their spawn and
+  effect cadence.
+
+Reset All Cheats turns every option off. Leaving the cheat screen does not
+reset its toggles, but quitting the executable does.
+
+## What version 1.1.0 preserves
+
+The native engine reads all 35 recovered screen sections plus the native
+Controls and cheat screens, 105 level sections, 34 object scripts, 51
+executable defaults, and 14 timed `ANIM.DAT` demonstrations. Its embedded set
+contains 689 converted sprites, 17 boards, 11 UI images, 47 sounds, 19 MIDI
+tracks, and the original game font.
 
 Gameplay runs at the recovered 55 ms simulation step. The port implements the
 original fixed-point movement, winding decay, collision rectangles,
@@ -83,13 +108,13 @@ The build creates `dist\Gearheads.exe`. `tools\build_embedded_assets.py`
 deterministically packs the converted `assets` tree into the PE resource; the
 finished EXE does not search for an adjacent asset folder.
 
-To produce the local v1.0.1 package:
+To produce the local v1.1.0 package:
 
 ```powershell
 python tools\package_release.py `
   --exe dist\Gearheads.exe `
   --output release `
-  --version 1.0.1
+  --version 1.1.0
 ```
 
 ## Preservation and reverse engineering
@@ -140,7 +165,7 @@ flicker.
 ## Credits and status
 
 See [CREDITS.md](CREDITS.md) for the complete recovered original staff list and
-native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.0.1
+native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.1.0
 details, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for provenance and
 rights information.
 
