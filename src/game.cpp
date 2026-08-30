@@ -5,6 +5,7 @@
 #include "obstacles.hpp"
 #include "physics.hpp"
 #include "powerups.hpp"
+#include "sprite_geometry.hpp"
 #include "toy_effects.hpp"
 #include "toy_behavior.hpp"
 
@@ -721,6 +722,8 @@ void Game::start_duel(DuelMode mode, const LevelDefinition* level) {
     }
     duel_elapsed_ = 0.0;
     duel_countdown_seconds_ = mode == DuelMode::Attract ? 0.0 : 3.0;
+    scoreless_seconds_ = 0.0;
+    sudden_death_active_ = false;
     simulation_accumulator_ = 0.0;
     match_winner_ = kNoMatchWinner;
     active_level_ = level != nullptr ? level : levels_.first_for_theme(selected_level_theme_);
@@ -807,7 +810,27 @@ void Game::award_score(int player) {
         return;
     }
     score_ = candidate;
+    if (!sudden_death_active_) scoreless_seconds_ = 0.0;
     play_sound(scripts_.sound(L"digit", player + 1));
+}
+
+void Game::begin_sudden_death() {
+    if (sudden_death_active_) return;
+    sudden_death_active_ = true;
+    score_ = original_sudden_death_scores(score_, defaults_.scalar("Winningscore"));
+    dynamic_obstacles_.erase(
+        std::remove_if(
+            dynamic_obstacles_.begin(),
+            dynamic_obstacles_.end(),
+            [](const DynamicObstacle& obstacle) {
+                return original_sudden_death_removes_obstacle(obstacle.code);
+            }
+        ),
+        dynamic_obstacles_.end()
+    );
+    previous_toy_contacts_.clear();
+    play_sound_alias(L"notoy");
+    play_sound(L"sounds/scoradd.wav");
 }
 
 void Game::cycle_selected_toy(int player, int direction) {
@@ -1117,11 +1140,19 @@ void Game::update_duel(double seconds, const InputState& input) {
         }
     }
 
-    simulation_accumulator_ += std::min(seconds, 0.25);
+    const double maximum_frame_seconds =
+        static_cast<double>(defaults_.scalar("MaxFrameStep")) / 1000.0;
+    simulation_accumulator_ += std::min(std::max(0.0, seconds), maximum_frame_seconds);
     const double tick_seconds = static_cast<double>(defaults_.scalar("FrameStep")) / 1000.0;
     while (simulation_accumulator_ >= tick_seconds) {
         advance_duel_tick();
         simulation_accumulator_ -= tick_seconds;
+        if (!sudden_death_active_ && !cheats_.infinite_clock) {
+            scoreless_seconds_ += tick_seconds;
+            if (scoreless_seconds_ >= static_cast<double>(defaults_.scalar("SuddenDeath"))) {
+                begin_sudden_death();
+            }
+        }
         if (match_winner_ != kNoMatchWinner) {
             finish_duel();
             return;
@@ -1331,26 +1362,22 @@ ToyBox Game::collision_box(const Toy& toy) {
                 static_cast<float>(attached_parameters.handy_attach_y());
         }
     }
-    const float draw_left = center_x - static_cast<float>(sprite.width) / 2.0F;
-    const float draw_top = center_y - static_cast<float>(sprite.height) / 2.0F;
-    float front = static_cast<float>(parameters.collision_front_percent());
-    float back = static_cast<float>(parameters.collision_back_percent());
-    if (toy.owner != 0) {
-        front = 100.0F - front;
-        back = 100.0F - back;
-    }
-    const float width = static_cast<float>(std::max(0, sprite.width - 1));
-    const float height = static_cast<float>(std::max(0, sprite.height - 1));
     // Segment 14:0e26-0f7b uses MulDiv over (width-1,height-1), then
-    // constructs both the forward and mirrored boxes from Front/Top/Back/Bottom.
-    return {
-        draw_left + width * std::min(front, back) / 100.0F,
-        draw_top + height *
-                       static_cast<float>(parameters.collision_top_percent()) / 100.0F,
-        draw_left + width * std::max(front, back) / 100.0F,
-        draw_top + height *
-                       static_cast<float>(parameters.collision_bottom_percent()) / 100.0F,
-    };
+    // anchors both the rendered sprite and its box at the signed XR origin.
+    const SpriteCollisionBox box = original_sprite_collision_box(
+        center_x,
+        center_y,
+        sprite.width,
+        sprite.height,
+        sprite.origin_x,
+        sprite.origin_y,
+        parameters.collision_front_percent(),
+        parameters.collision_top_percent(),
+        parameters.collision_back_percent(),
+        parameters.collision_bottom_percent(),
+        toy.owner != 0
+    );
+    return {box.left, box.top, box.right, box.bottom};
 }
 
 ToyBox Game::collision_box(const ObstacleDefinition& obstacle) {
@@ -1361,23 +1388,21 @@ ToyBox Game::collision_box(const ObstacleDefinition& obstacle) {
     const auto& values = defaults_.integers(archetype->parameters);
     if (values.size() != 6 && values.size() != 12) return {};
     const Image& sprite = images_.load(archetype->sprite);
-    const float draw_left = static_cast<float>(obstacle.x - sprite.width / 2);
-    const float draw_top = static_cast<float>(obstacle.y - sprite.height / 2);
     const std::size_t collision_offset = values.size() == 12 ? 6 : 2;
-    float front = static_cast<float>(values[collision_offset]);
-    float back = static_cast<float>(values[collision_offset + 2]);
-    if (!obstacle.facing_right) {
-        front = 100.0F - front;
-        back = 100.0F - back;
-    }
-    const float width = static_cast<float>(std::max(0, sprite.width - 1));
-    const float height = static_cast<float>(std::max(0, sprite.height - 1));
-    return {
-        draw_left + width * std::min(front, back) / 100.0F,
-        draw_top + height * static_cast<float>(values[collision_offset + 1]) / 100.0F,
-        draw_left + width * std::max(front, back) / 100.0F,
-        draw_top + height * static_cast<float>(values[collision_offset + 3]) / 100.0F,
-    };
+    const SpriteCollisionBox box = original_sprite_collision_box(
+        static_cast<float>(obstacle.x),
+        static_cast<float>(obstacle.y),
+        sprite.width,
+        sprite.height,
+        sprite.origin_x,
+        sprite.origin_y,
+        values[collision_offset],
+        values[collision_offset + 1],
+        values[collision_offset + 2],
+        values[collision_offset + 3],
+        !obstacle.facing_right
+    );
+    return {box.left, box.top, box.right, box.bottom};
 }
 
 ToyBox Game::collision_box(const DynamicObstacle& obstacle) {
@@ -1387,39 +1412,42 @@ ToyBox Game::collision_box(const DynamicObstacle& obstacle) {
     }
     const ToyParameters parameters = defaults_.toy(archetype->parameters);
     const Image& sprite = images_.load(sprite_for(obstacle));
-    const float draw_left = obstacle.x - static_cast<float>(sprite.width) / 2.0F;
-    const float draw_top = obstacle.y - static_cast<float>(sprite.height) / 2.0F;
-    float front = static_cast<float>(parameters.collision_front_percent());
-    float back = static_cast<float>(parameters.collision_back_percent());
-    if (obstacle.velocity_x16 < 0 ||
-        (obstacle.velocity_x16 == 0 && !obstacle.facing_right)) {
-        front = 100.0F - front;
-        back = 100.0F - back;
-    }
-    const float width = static_cast<float>(std::max(0, sprite.width - 1));
-    const float height = static_cast<float>(std::max(0, sprite.height - 1));
-    return {
-        draw_left + width * std::min(front, back) / 100.0F,
-        draw_top + height * static_cast<float>(parameters.collision_top_percent()) / 100.0F,
-        draw_left + width * std::max(front, back) / 100.0F,
-        draw_top + height * static_cast<float>(parameters.collision_bottom_percent()) / 100.0F,
-    };
+    const bool mirrored = obstacle.velocity_x16 < 0 ||
+                          (obstacle.velocity_x16 == 0 && !obstacle.facing_right);
+    const SpriteCollisionBox box = original_sprite_collision_box(
+        obstacle.x,
+        obstacle.y,
+        sprite.width,
+        sprite.height,
+        sprite.origin_x,
+        sprite.origin_y,
+        parameters.collision_front_percent(),
+        parameters.collision_top_percent(),
+        parameters.collision_back_percent(),
+        parameters.collision_bottom_percent(),
+        mirrored
+    );
+    return {box.left, box.top, box.right, box.bottom};
 }
 
 ToyBox Game::collision_box(const Powerup& powerup) {
     const auto& values = defaults_.integers("puup");
     if (values.size() != 6) return {};
     const Image& sprite = images_.load(sprite_for(powerup));
-    const float draw_left = powerup.x - static_cast<float>(sprite.width) / 2.0F;
-    const float draw_top = powerup.y - static_cast<float>(sprite.height) / 2.0F;
-    const float width = static_cast<float>(std::max(0, sprite.width - 1));
-    const float height = static_cast<float>(std::max(0, sprite.height - 1));
-    return {
-        draw_left + width * static_cast<float>(values[2]) / 100.0F,
-        draw_top + height * static_cast<float>(values[3]) / 100.0F,
-        draw_left + width * static_cast<float>(values[4]) / 100.0F,
-        draw_top + height * static_cast<float>(values[5]) / 100.0F,
-    };
+    const SpriteCollisionBox box = original_sprite_collision_box(
+        powerup.x,
+        powerup.y,
+        sprite.width,
+        sprite.height,
+        sprite.origin_x,
+        sprite.origin_y,
+        values[2],
+        values[3],
+        values[4],
+        values[5],
+        powerup.owner != 0
+    );
+    return {box.left, box.top, box.right, box.bottom};
 }
 
 void Game::update_desired_motion(Toy& toy) {
@@ -1477,7 +1505,8 @@ void Game::update_desired_motion(Toy& toy) {
     }
     if (mode == 2) {
         const int erratic_period = std::max(1, defaults_.scalar("Erratic"));
-        if (toy.age_ticks % erratic_period == 0) {
+        std::uniform_int_distribution<int> turn_roll(0, erratic_period - 1);
+        if (original_erratic_turn_due(turn_roll(random_), erratic_period)) {
             std::uniform_int_distribution<int> heading_distribution(-16, 15);
             toy.heading = (heading_distribution(random_) + (toy.owner == 0 ? 0 : 32)) & 63;
             const int magnitude16 = static_cast<int>(std::hypot(
@@ -2062,6 +2091,10 @@ void Game::advance_duel_tick() {
             Toy& toy = toys_[index];
             if (!physical_toy(toy)) continue;
             for (const ObstacleDefinition& obstacle : active_level_->obstacles) {
+                if (sudden_death_active_ &&
+                    original_sudden_death_removes_obstacle(obstacle.code)) {
+                    continue;
+                }
                 const auto archetype = obstacle_archetype(obstacle.code);
                 if (!archetype.has_value()) {
                     continue;
@@ -2895,14 +2928,18 @@ void Game::render_duel(Canvas& canvas) {
     }
     if (active_level_ != nullptr) {
         for (const ObstacleDefinition& obstacle : active_level_->obstacles) {
+            if (sudden_death_active_ &&
+                original_sudden_death_removes_obstacle(obstacle.code)) {
+                continue;
+            }
             const auto archetype = obstacle_archetype(obstacle.code);
             if (!archetype.has_value()) continue;
             if (archetype->interaction == ObstacleInteraction::Dynamic) continue;
             const Image& image = images_.load(archetype->sprite);
             canvas.image(
                 image,
-                obstacle.x - image.width / 2,
-                obstacle.y - image.height / 2,
+                original_sprite_draw_x(static_cast<float>(obstacle.x), image.origin_x),
+                original_sprite_draw_y(static_cast<float>(obstacle.y), image.origin_y),
                 !obstacle.facing_right
             );
         }
@@ -2913,8 +2950,8 @@ void Game::render_duel(Canvas& canvas) {
         const Image& image = images_.load(sprite_for(obstacle));
         canvas.image(
             image,
-            static_cast<int>(obstacle.x) - image.width / 2,
-            static_cast<int>(obstacle.y) - image.height / 2,
+            original_sprite_draw_x(obstacle.x, image.origin_x),
+            original_sprite_draw_y(obstacle.y, image.origin_y),
             obstacle.velocity_x16 < 0 ||
                 (obstacle.velocity_x16 == 0 && !obstacle.facing_right)
         );
@@ -2923,8 +2960,8 @@ void Game::render_duel(Canvas& canvas) {
         const Image& image = images_.load(sprite_for(*powerup_));
         canvas.image(
             image,
-            static_cast<int>(powerup_->x) - image.width / 2,
-            static_cast<int>(powerup_->y) - image.height / 2,
+            original_sprite_draw_x(powerup_->x, image.origin_x),
+            original_sprite_draw_y(powerup_->y, image.origin_y),
             powerup_->owner != 0
         );
     }
@@ -2945,8 +2982,8 @@ void Game::render_duel(Canvas& canvas) {
         }
         canvas.image(
             sprite,
-            static_cast<int>(draw_x) - sprite.width / 2,
-            static_cast<int>(draw_y) - sprite.height / 2,
+            original_sprite_draw_x(draw_x, sprite.origin_x),
+            original_sprite_draw_y(draw_y, sprite.origin_y),
             toy.owner != 0
         );
     }

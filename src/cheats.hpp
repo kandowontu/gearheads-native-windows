@@ -8,6 +8,7 @@ namespace gh {
 
 enum class Cheat {
     NeverLose,
+    InfiniteClock,
     InfiniteWinding,
     InstantLaunch,
     AllToys,
@@ -16,6 +17,7 @@ enum class Cheat {
 
 struct CheatSettings {
     bool never_lose = false;
+    bool infinite_clock = false;
     bool infinite_winding = false;
     bool instant_launch = false;
     bool all_toys = false;

@@ -1,60 +1,49 @@
-# Gearheads Native Windows Port 1.1.0
+# Gearheads Native Windows Port 1.1.1
 
-Release date: 2026-08-21
+Release date: 2026-08-30
 
-Version 1.1 adds optional gameplay cheats, fully configurable keyboard
-controls, and a selected-toy HUD for bonus boards when their normally fixed
-rosters are expanded. It retains the audited gameplay, audio, palette,
-orientation, timing, fullscreen, and self-contained-runtime repairs from
-version 1.0.1.
+Version 1.1.1 is a disassembly-backed gameplay-parity update. It corrects
+sprite anchoring, collision geometry, erratic-toy timing, long-frame handling,
+and the original scoreless-match deadline while preserving the configurable
+controls, cheat menu, selected-toy HUD, audio repairs, and self-contained
+runtime introduced in earlier releases.
 
-## Configurable controls
+## Rendering and collision parity
 
-- Replaced the static Controls page with an interactive ten-action binding
-  screen covering lane selection, toy selection, and release for both sides.
-- Added single-key capture with Escape cancellation and live binding labels.
-- Conflicting assignments swap automatically instead of activating two
-  gameplay actions at once.
-- Added Reset Default Controls, including the original Enter/Space dual release
-  binding for the right player.
-- Saved custom bindings to `%LOCALAPPDATA%\Gearheads Native\controls.ini` and
-  restored them on later launches.
-- Kept menu navigation, Escape, Alt+Enter, F9, and F10 fixed so custom gameplay
-  bindings cannot lock the player out of navigation, fullscreen, or audio
-  controls.
+- Anchored gameplay toys, powerups, and obstacles with every frame's recovered
+  signed XR origin instead of geometrically centering each bitmap.
+- Rebuilt forward and mirrored collision rectangles from the same origin
+  anchor used for drawing.
+- Reproduced the original `(width-1)`/`(height-1)` extents and Win16
+  `MulDiv` rounding.
+- Kept the toybox preview bitmap-centered, matching its separate original
+  rendering path.
+
+## Timing and match-rule parity
+
+- Restored the original 550 ms maximum elapsed-frame step.
+- Changed erratic toys from a guaranteed turn every ten ticks to the recovered
+  independent `Random()%10 == 0` check on every simulation tick.
+- Restored the 300-second scoreless-match deadline and reset it after scoring.
+- On deadline expiry, remove arrows, cracks, teleporters, glue, rocks, bugs,
+  blocks, and walls while deliberately retaining mud and oil.
+- Raise scores below 19 to 19 so the original 21-point, win-by-two finish
+  proceeds as sudden death.
 
 ## Cheat menu
 
-- Added a hidden, session-only menu opened with Ctrl+Alt+F1 on the main menu.
-  All cheat settings start disabled on every launch.
-- Added Never Lose vs Computer, which blocks an AI match-winning point without
-  changing ordinary scoring.
-- Added Infinite Toy Wind-Up for human-owned toys.
-- Added Instant Full Launch, allowing immediate releases at maximum winding
-  while leaving computer timing unchanged.
-- Added All Toys Everywhere, expanding both rosters to all twelve selectable
-  toys even on tournament levels with fixed rosters.
-- Added Powerup Party, enabling powerups on every board with faster spawn and
-  effect timing.
-- Added Reset All Cheats and live ON/OFF indicators.
-
-## Bonus-level HUD
-
-- Added compact P1/P2 selected-toy badges when a board has no original toybox
-  rectangle but a cheat or future mode supplies multiple selectable toys.
-- Scaled the original gameplay sprites into the badges without changing their
-  recovered palette or orientation.
-- Tested badge placement against all twelve original bonus boards so the HUD
-  avoids their recovered wind-up gauge positions.
-- Preserved the original hidden preview when a bonus level still has its normal
-  forced single-toy roster.
+- Added Infinite Match Clock, which disables the restored scoreless-match
+  deadline for the current session.
+- Retained live ON/OFF state, Reset All Cheats, and default-off startup
+  behavior.
 
 ## Packaging and verification
 
-- The release remains one self-contained 64-bit `Gearheads.exe`; it requires no
-  original CD, VHD, installer, executable, DLL, archive, or adjacent assets.
-- Expanded the automated suite to 29 tests, adding cheat-rule, control-binding
-  persistence/conflict, and all-bonus HUD-layout coverage while retaining the
-  embedded-asset, PE-import, and fullscreen checks.
+- The release remains one self-contained 64-bit `Gearheads.exe`; it requires
+  no original CD, VHD, installer, executable, DLL, archive, or adjacent assets.
+- Expanded the automated suite from 29 to 30 tests with exact sprite-origin,
+  mirrored collision, sudden-death, erratic-timing, and cheat coverage.
+- Revalidated embedded assets, sound references and loops, configurable
+  controls, fullscreen toggling, and the native PE import table.
 - The executable is unsigned. Verify it with the supplied SHA-256 values before
   bypassing any SmartScreen warning.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(GearheadsNative VERSION 1.1.0 LANGUAGES CXX RC)
+project(GearheadsNative VERSION 1.1.1 LANGUAGES CXX RC)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -37,6 +37,7 @@ add_executable(gearheads WIN32
     src/scripts.cpp
     src/defaults.cpp
     src/physics.cpp
+    src/sprite_geometry.cpp
     src/match_rules.cpp
     src/obstacles.cpp
     src/original_dispatch.cpp
@@ -205,6 +206,13 @@ if(BUILD_TESTING)
     target_compile_features(match_rules_test PRIVATE cxx_std_20)
     target_include_directories(match_rules_test PRIVATE src)
     add_test(NAME match_rules COMMAND match_rules_test)
+    add_executable(sprite_geometry_test
+        tests/sprite_geometry_test.cpp
+        src/sprite_geometry.cpp
+    )
+    target_compile_features(sprite_geometry_test PRIVATE cxx_std_20)
+    target_include_directories(sprite_geometry_test PRIVATE src)
+    add_test(NAME sprite_geometry COMMAND sprite_geometry_test)
     add_executable(launch_timing_test
         tests/launch_timing_test.cpp
         src/launch_timing.cpp

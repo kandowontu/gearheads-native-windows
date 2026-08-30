@@ -158,7 +158,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show_command) {
         HWND window = CreateWindowExW(
             0,
             window_class.lpszClassName,
-            L"Gearheads - Native Windows Port 1.1.0",
+            L"Gearheads - Native Windows Port 1.1.1",
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

@@ -5,6 +5,7 @@ namespace gh {
 bool CheatSettings::enabled(Cheat cheat) const {
     switch (cheat) {
         case Cheat::NeverLose: return never_lose;
+        case Cheat::InfiniteClock: return infinite_clock;
         case Cheat::InfiniteWinding: return infinite_winding;
         case Cheat::InstantLaunch: return instant_launch;
         case Cheat::AllToys: return all_toys;
@@ -16,6 +17,7 @@ bool CheatSettings::enabled(Cheat cheat) const {
 void CheatSettings::toggle(Cheat cheat) {
     switch (cheat) {
         case Cheat::NeverLose: never_lose = !never_lose; break;
+        case Cheat::InfiniteClock: infinite_clock = !infinite_clock; break;
         case Cheat::InfiniteWinding: infinite_winding = !infinite_winding; break;
         case Cheat::InstantLaunch: instant_launch = !instant_launch; break;
         case Cheat::AllToys: all_toys = !all_toys; break;
@@ -29,6 +31,7 @@ void CheatSettings::reset() {
 
 std::optional<Cheat> cheat_from_action(std::wstring_view action) {
     if (action == L">cheat$neverlose") return Cheat::NeverLose;
+    if (action == L">cheat$infiniteclock") return Cheat::InfiniteClock;
     if (action == L">cheat$infinitewinding") return Cheat::InfiniteWinding;
     if (action == L">cheat$instantlaunch") return Cheat::InstantLaunch;
     if (action == L">cheat$alltoys") return Cheat::AllToys;

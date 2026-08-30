@@ -71,8 +71,8 @@ int main(int argc, char** argv) {
         require(
             std::count_if(
                 cheats->commands.begin(), cheats->commands.end(), interactive
-            ) == 7,
-            "cheat screen should expose five toggles, reset, and back"
+            ) == 8,
+            "cheat screen should expose six toggles, reset, and back"
         );
 
         const gh::ScreenDefinition* staff = database.find(L"staff");

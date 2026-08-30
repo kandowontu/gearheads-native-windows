@@ -165,6 +165,9 @@ and signed X/Y origin, converts `(width-1)` and `(height-1)` to 1/16-pixel
 units, and uses `MulDiv(..., percent, 100)` to create forward and mirrored
 rectangles.  The native duel now uses the same four percentage extents against
 the current animation frame instead of its former invented circular radius.
+The object position is the XR origin anchor, so native drawing and collision
+both subtract the frame's signed origin instead of geometrically centering
+different-sized frames.
 
 The native toy catalog also obtains mass, horizontal speed, movement mode, Vim
 decay, extras, collision percentages, and Handy offsets from this runtime table.
@@ -185,6 +188,17 @@ including the original cosine table's one-unit asymmetries.  Segment 14
 `(current*16 + (desired-current)*friction) >> 4`, using the level's 1-15
 friction value, and zeros motion at the decay cutoff.  These fixed-point paths
 are covered by the native physics test.
+
+Mode 2 calls `Random()%Erratic` on every update and chooses a new heading only
+when the remainder is zero. With the shipped `Erratic=10`, this is an
+independent 1-in-10 test rather than a guaranteed turn every ten frames.
+
+The duel deadline at segment 1 `2206-2289` is reset after each score by segment
+10 `10ab-10e8`. When the shipped `SuddenDeath=300` seconds elapse without a
+score, the type list at DS:`15cc` removes arrows, cracks, teleporters, glue,
+rocks, bugs, blocks, and walls (but not mud or oil), then raises both scores to
+at least `Winningscore-2`. The native engine preserves that cleanup and 19-19
+floor; the optional Infinite Match Clock cheat suppresses the deadline.
 
 The two-body response at segment 14 `0062-03fb` first projects both velocities
 onto the center-to-center normal and its tangent.  Separating pairs are left

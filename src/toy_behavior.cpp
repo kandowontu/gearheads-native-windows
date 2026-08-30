@@ -52,6 +52,10 @@ bool original_animation_is_transient(int state) {
            base == kAnimationAction;
 }
 
+bool original_erratic_turn_due(const int random_remainder, const int erratic) {
+    return erratic > 0 && random_remainder % erratic == 0;
+}
+
 bool original_kanga_can_punch(
     bool target_is_kanga,
     int source_winding,

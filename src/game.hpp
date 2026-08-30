@@ -158,6 +158,7 @@ private:
         int winding = -1
     );
     void update_powerups();
+    void begin_sudden_death();
     void apply_powerup_pickup(Powerup& powerup, Toy& target);
     void update_dynamic_obstacle(DynamicObstacle& obstacle);
     void apply_dynamic_contact(DynamicObstacle& obstacle, Toy& target);
@@ -238,6 +239,8 @@ private:
     double frontend_elapsed_ = 0.0;
     double duel_elapsed_ = 0.0;
     double duel_countdown_seconds_ = 0.0;
+    double scoreless_seconds_ = 0.0;
+    bool sudden_death_active_ = false;
     double attract_timeout_seconds_ = 60.0;
     std::wstring attract_anykey_target_ = L"main";
     std::wstring attract_timeout_target_ = L"main";

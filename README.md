@@ -1,7 +1,7 @@
-# Gearheads Native Windows Port 1.1.0
+# Gearheads Native Windows Port 1.1.1
 
 Gearheads Native is a preservation-oriented, native Windows reimplementation
-of the 1996 toy-battle game. Version 1.1.0 runs without the original CD, disk
+of the 1996 toy-battle game. Version 1.1.1 runs without the original CD, disk
 image, installer, executable, DLLs, or separately supplied game assets.
 
 The release is a single 64-bit `Gearheads.exe`. Its verified converted runtime
@@ -13,7 +13,7 @@ recreated from the EXE. Champion-table updates are stored separately under
 
 ## Download and run
 
-1. Extract the v1.1.0 release ZIP, or copy `Gearheads.exe` by itself.
+1. Extract the v1.1.1 release ZIP, or copy `Gearheads.exe` by itself.
 2. Run `Gearheads.exe`. No installation or compatibility mode is required.
 3. If Windows SmartScreen warns about the unsigned executable, inspect its
    SHA-256 value against `SHA256SUMS.txt` before choosing to run it.
@@ -49,6 +49,8 @@ menu. Its toggles are disabled on every fresh launch:
 
 - Never Lose vs Computer blocks an AI match-winning point while a human player
   is still in the match.
+- Infinite Match Clock disables the original sudden-death deadline, which
+  otherwise fires after 300 seconds without a score.
 - Infinite Toy Wind-Up stops natural winding decay for human-owned toys.
 - Instant Full Launch lets human players release fully wound toys without
   waiting for the launch gauge.
@@ -62,7 +64,7 @@ menu. Its toggles are disabled on every fresh launch:
 Reset All Cheats turns every option off. Leaving the cheat screen does not
 reset its toggles, but quitting the executable does.
 
-## What version 1.1.0 preserves
+## What version 1.1.1 preserves
 
 The native engine reads all 35 recovered screen sections plus the native
 Controls and cheat screens, 105 level sections, 34 object scripts, 51
@@ -70,12 +72,18 @@ executable defaults, and 14 timed `ANIM.DAT` demonstrations. Its embedded set
 contains 689 converted sprites, 17 boards, 11 UI images, 47 sounds, 19 MIDI
 tracks, and the original game font.
 
-Gameplay runs at the recovered 55 ms simulation step. The port implements the
+Gameplay runs at the recovered 55 ms simulation step with the original 550 ms
+elapsed-frame cap. The port implements the
 original fixed-point movement, winding decay, collision rectangles,
 mass-weighted response, friction and ice, toy abilities, powerups, board
 surfaces, teleporters, moving obstacles, match rules, toybox selection,
 computer players, 50-level tournament, bonuses, lives, score multipliers,
 champion table, and scripted attract mode.
+
+The recovered sudden-death rule resets its 300-second deadline after every
+score. On expiry it removes arrows, cracks, teleporters, glue, rocks, bugs,
+blocks, and walls while retaining mud and oil, then raises each score below 19
+to 19 for the original 21-point, win-by-two finish.
 
 Each toy now keeps its original independent behavior byte, collision layer,
 directional animation state, frame clock, and Handy attachment pointer. The
@@ -85,6 +93,10 @@ preserves Ziggy toggles, Bomby chains, Clucketta/Small Fry hatching, Zap-bot
 drain, Kangaruffian punches, Disasteroid recovery, Presto jumps, Krush roars,
 Deadhead reversals, Orbit lifts, Handy winding transfers, and the docked Rocket
 release path without one ability overwriting another toy's timer.
+
+Erratic toys perform the recovered random 1-in-10 turn test independently on
+every simulation tick. Gameplay sprites and their hit rectangles share the
+current frame's signed XR origin and Win16 `MulDiv` rounding.
 
 The XR sprite converter uses the separately recovered gameplay palette rather
 than the palette embedded in the toybox and background DIBs. It converts the
@@ -108,13 +120,13 @@ The build creates `dist\Gearheads.exe`. `tools\build_embedded_assets.py`
 deterministically packs the converted `assets` tree into the PE resource; the
 finished EXE does not search for an adjacent asset folder.
 
-To produce the local v1.1.0 package:
+To produce the local v1.1.1 package:
 
 ```powershell
 python tools\package_release.py `
   --exe dist\Gearheads.exe `
   --output release `
-  --version 1.1.0
+  --version 1.1.1
 ```
 
 ## Preservation and reverse engineering
@@ -165,7 +177,7 @@ flicker.
 ## Credits and status
 
 See [CREDITS.md](CREDITS.md) for the complete recovered original staff list and
-native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.1.0
+native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.1.1
 details, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for provenance and
 rights information.
 

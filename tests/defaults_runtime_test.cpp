@@ -19,6 +19,8 @@ int main(int argc, char** argv) {
         require(defaults.string_count() == 3, "expected all three string descriptors");
         require(defaults.scalar("GaugeTime") == 6000, "GaugeTime recovery changed");
         require(defaults.scalar("FrameStep") == 55, "FrameStep recovery changed");
+        require(defaults.scalar("MaxFrameStep") == 550, "MaxFrameStep recovery changed");
+        require(defaults.scalar("SuddenDeath") == 300, "SuddenDeath recovery changed");
         require(defaults.scalar("Winningscore") == 21, "winning score recovery changed");
         require(defaults.text("Anim") == "anim.dat", "Anim string recovery changed");
 

@@ -8,16 +8,18 @@ int main() {
     CheatSettings settings;
     assert(!settings.enabled(Cheat::NeverLose));
     settings.toggle(Cheat::NeverLose);
+    settings.toggle(Cheat::InfiniteClock);
     settings.toggle(Cheat::InfiniteWinding);
-    assert(settings.never_lose && settings.infinite_winding);
+    assert(settings.never_lose && settings.infinite_clock && settings.infinite_winding);
     settings.toggle(Cheat::NeverLose);
-    assert(!settings.never_lose && settings.infinite_winding);
+    assert(!settings.never_lose && settings.infinite_clock && settings.infinite_winding);
     settings.reset();
-    assert(!settings.never_lose && !settings.infinite_winding &&
+    assert(!settings.never_lose && !settings.infinite_clock && !settings.infinite_winding &&
            !settings.instant_launch && !settings.all_toys &&
            !settings.powerup_party);
 
     assert(cheat_from_action(L">cheat$alltoys") == Cheat::AllToys);
+    assert(cheat_from_action(L">cheat$infiniteclock") == Cheat::InfiniteClock);
     assert(!cheat_from_action(L">cheat$reset").has_value());
     assert(cheat_menu_chord(true, true, true, true));
     assert(!cheat_menu_chord(false, true, true, true));

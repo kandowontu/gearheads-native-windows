@@ -19,6 +19,10 @@ int main() {
     assert(original_directional_animation_state(15, 32, true, true) == 15);
     assert(original_animation_is_transient(10));
     assert(!original_animation_is_transient(3));
+    for (int roll = 0; roll < 10; ++roll) {
+        assert(original_erratic_turn_due(roll, 10) == (roll == 0));
+    }
+    assert(!original_erratic_turn_due(0, 0));
     assert(original_kanga_can_punch(true, 500, 500));
     assert(!original_kanga_can_punch(true, 499, 500));
     assert(original_kanga_can_punch(false, 1, 900));

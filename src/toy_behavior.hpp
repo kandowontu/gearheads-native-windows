@@ -21,6 +21,7 @@ int original_directional_animation_state(
     bool has_up_state
 );
 bool original_animation_is_transient(int state);
+bool original_erratic_turn_due(int random_remainder, int erratic);
 bool original_kanga_can_punch(
     bool target_is_kanga,
     int source_winding,
