@@ -1,4 +1,4 @@
-GEARHEADS NATIVE WINDOWS PORT 1.1.1
+GEARHEADS NATIVE WINDOWS PORT 1.1.2
 ==================================
 
 This is a self-contained 64-bit Windows build. Run Gearheads.exe. You do not
@@ -24,11 +24,17 @@ Controls
 Menus: Arrow keys, Enter or Space. Escape or Backspace goes back.
 Right player: Up/Down lane, Left/Right toy, Enter or Space release.
 Left player: W/S lane, A/D toy, F release.
+XInput: D-pad/left stick selects lanes and toys, LB/RB also selects toys,
+A releases or confirms, B/Back returns, and Start confirms menus.
+Controllers map to human sides from left to right. In one-player, controller 1
+controls the right-side human; in two-player, controllers 1 and 2 control the
+left and right sides.
 Escape leaves a duel. Any key leaves an attract demonstration.
 Alt+Enter toggles borderless fullscreen.
 F9 toggles sound effects. F10 toggles music. These choices are saved.
 The main menu Controls screen allows every gameplay action to be rebound.
 Conflicting keys are swapped, defaults can be restored, and bindings are saved.
+Keyboard bindings do not change the fixed XInput layout.
 
 Cheat menu
 ----------

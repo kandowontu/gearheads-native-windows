@@ -30,9 +30,22 @@ bool pressed(const InputState& input, int key) {
 }
 
 bool any_pressed(const InputState& input) {
-    return std::any_of(input.pressed.begin(), input.pressed.end(), [](bool value) {
-        return value;
-    });
+    return any_gamepad_pressed(input) ||
+           std::any_of(input.pressed.begin(), input.pressed.end(), [](bool value) {
+               return value;
+           });
+}
+
+bool human_gamepad_pressed(
+    const InputState& input,
+    const std::array<bool, 2>& computer_controlled,
+    int player,
+    GamepadControl control
+) {
+    const auto gamepad_index = human_gamepad_index(computer_controlled, player);
+    if (!gamepad_index.has_value() || *gamepad_index >= input.gamepads.size()) return false;
+    const GamepadState& gamepad = input.gamepads[*gamepad_index];
+    return gamepad.connected && gamepad_control_pressed(gamepad, control);
 }
 
 int board_grid_width(const Rectangle& stage) {
@@ -462,8 +475,18 @@ void Game::activate_frontend(const std::wstring& action) {
 
 void Game::update_frontend(double seconds, const InputState& input) {
     frontend_elapsed_ += std::max(0.0, seconds);
+    const bool controller_up = any_gamepad_control_pressed(input, GamepadControl::Up);
+    const bool controller_down = any_gamepad_control_pressed(input, GamepadControl::Down);
+    const bool controller_left = any_gamepad_control_pressed(input, GamepadControl::Left);
+    const bool controller_right = any_gamepad_control_pressed(input, GamepadControl::Right);
+    const bool controller_confirm =
+        any_gamepad_control_pressed(input, GamepadControl::A) ||
+        any_gamepad_control_pressed(input, GamepadControl::Start);
+    const bool controller_cancel =
+        any_gamepad_control_pressed(input, GamepadControl::B) ||
+        any_gamepad_control_pressed(input, GamepadControl::Back);
     if (frontend_name_ == L"controls" && pending_control_binding_.has_value()) {
-        if (pressed(input, VK_ESCAPE)) {
+        if (pressed(input, VK_ESCAPE) || controller_cancel) {
             pending_control_binding_.reset();
             return;
         }
@@ -497,7 +520,9 @@ void Game::update_frontend(double seconds, const InputState& input) {
     }
     const ScreenDefinition* definition = screens_.find(frontend_name_);
     if (frontend_name_ == L"n1_victory") {
-        if (pressed(input, VK_BACK) && !entered_name_.empty()) entered_name_.pop_back();
+        if ((pressed(input, VK_BACK) || controller_cancel) && !entered_name_.empty()) {
+            entered_name_.pop_back();
+        }
         for (int key = 'A'; key <= 'Z' && entered_name_.size() < 15; ++key) {
             if (pressed(input, key)) entered_name_.push_back(static_cast<wchar_t>(key));
         }
@@ -508,7 +533,7 @@ void Game::update_frontend(double seconds, const InputState& input) {
             entered_name_.back() != L' ') {
             entered_name_.push_back(L' ');
         }
-        if (pressed(input, VK_RETURN) && !entered_name_.empty()) {
+        if ((pressed(input, VK_RETURN) || controller_confirm) && !entered_name_.empty()) {
             champions_.insert(tournament_.total_score, entered_name_);
             champions_.save();
             enter_frontend(L"n1_winners");
@@ -517,7 +542,9 @@ void Game::update_frontend(double seconds, const InputState& input) {
     }
     const bool staff_navigation = frontend_name_ == L"staff" &&
                                   (pressed(input, VK_UP) || pressed(input, VK_DOWN) ||
-                                   pressed(input, VK_LEFT) || pressed(input, VK_RIGHT));
+                                   pressed(input, VK_LEFT) || pressed(input, VK_RIGHT) ||
+                                   controller_up || controller_down || controller_left ||
+                                   controller_right);
     if (definition != nullptr && any_pressed(input) && !staff_navigation) {
         for (const ScreenCommand& command : definition->commands) {
             if (command.key == L"anykey" && !command.arguments.empty()) {
@@ -540,15 +567,17 @@ void Game::update_frontend(double seconds, const InputState& input) {
     const auto interactive = interactive_commands();
     if (!interactive.empty()) {
         const int count = static_cast<int>(interactive.size());
-        if (pressed(input, VK_UP) || pressed(input, VK_LEFT)) {
+        if (pressed(input, VK_UP) || pressed(input, VK_LEFT) ||
+            controller_up || controller_left) {
             menu_item_ = (menu_item_ + count - 1) % count;
         }
-        if (pressed(input, VK_DOWN) || pressed(input, VK_RIGHT)) {
+        if (pressed(input, VK_DOWN) || pressed(input, VK_RIGHT) ||
+            controller_down || controller_right) {
             menu_item_ = (menu_item_ + 1) % count;
         }
     }
 
-    if (pressed(input, VK_ESCAPE) || pressed(input, VK_BACK)) {
+    if (pressed(input, VK_ESCAPE) || pressed(input, VK_BACK) || controller_cancel) {
         if (definition != nullptr) {
             for (const ScreenCommand& command : definition->commands) {
                 if ((command.key == L"prev" || command.key == L"next") &&
@@ -562,7 +591,10 @@ void Game::update_frontend(double seconds, const InputState& input) {
         return;
     }
 
-    if (!pressed(input, VK_RETURN) && !pressed(input, VK_SPACE)) return;
+    if (!pressed(input, VK_RETURN) && !pressed(input, VK_SPACE) &&
+        !controller_confirm) {
+        return;
+    }
     play_sound_alias(L"oksound");
     if (!interactive.empty()) {
         activate_frontend(command_action(*interactive[static_cast<std::size_t>(menu_item_)]));
@@ -990,7 +1022,11 @@ void Game::update_duel(double seconds, const InputState& input) {
         activate_frontend(attract_timeout_target_);
         return;
     }
-    if (duel_mode_ != DuelMode::Attract && pressed(input, VK_ESCAPE)) {
+    const bool controller_cancel =
+        any_gamepad_control_pressed(input, GamepadControl::B) ||
+        any_gamepad_control_pressed(input, GamepadControl::Back);
+    if (duel_mode_ != DuelMode::Attract &&
+        (pressed(input, VK_ESCAPE) || controller_cancel)) {
         enter_frontend(L"main");
         return;
     }
@@ -1036,42 +1072,88 @@ void Game::update_duel(double seconds, const InputState& input) {
     }
 
     if (!computer_controlled_[0]) {
-        if (controls_.pressed(ControlAction::LeftLaneUp, input.pressed)) {
+        if (controls_.pressed(ControlAction::LeftLaneUp, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::Up
+            )) {
             const float previous = release_y_[0];
             release_y_[0] = move_release(release_y_[0], -1, stage_);
             if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (controls_.pressed(ControlAction::LeftLaneDown, input.pressed)) {
+        if (controls_.pressed(ControlAction::LeftLaneDown, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::Down
+            )) {
             const float previous = release_y_[0];
             release_y_[0] = move_release(release_y_[0], 1, stage_);
             if (release_y_[0] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (controls_.pressed(ControlAction::LeftToyPrevious, input.pressed)) {
+        if (controls_.pressed(ControlAction::LeftToyPrevious, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::Left
+            ) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::LeftShoulder
+            )) {
             cycle_selected_toy(0, -1);
         }
-        if (controls_.pressed(ControlAction::LeftToyNext, input.pressed)) {
+        if (controls_.pressed(ControlAction::LeftToyNext, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::Right
+            ) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::RightShoulder
+            )) {
             cycle_selected_toy(0, 1);
         }
-        if (controls_.pressed(ControlAction::LeftRelease, input.pressed)) release_toy(0);
+        if (controls_.pressed(ControlAction::LeftRelease, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 0, GamepadControl::A
+            )) {
+            release_toy(0);
+        }
     }
     if (!computer_controlled_[1]) {
-        if (controls_.pressed(ControlAction::RightLaneUp, input.pressed)) {
+        if (controls_.pressed(ControlAction::RightLaneUp, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::Up
+            )) {
             const float previous = release_y_[1];
             release_y_[1] = move_release(release_y_[1], -1, stage_);
             if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (controls_.pressed(ControlAction::RightLaneDown, input.pressed)) {
+        if (controls_.pressed(ControlAction::RightLaneDown, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::Down
+            )) {
             const float previous = release_y_[1];
             release_y_[1] = move_release(release_y_[1], 1, stage_);
             if (release_y_[1] != previous) play_sound(scripts_.sound(L"arrow", 1));
         }
-        if (controls_.pressed(ControlAction::RightToyPrevious, input.pressed)) {
+        if (controls_.pressed(ControlAction::RightToyPrevious, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::Left
+            ) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::LeftShoulder
+            )) {
             cycle_selected_toy(1, -1);
         }
-        if (controls_.pressed(ControlAction::RightToyNext, input.pressed)) {
+        if (controls_.pressed(ControlAction::RightToyNext, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::Right
+            ) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::RightShoulder
+            )) {
             cycle_selected_toy(1, 1);
         }
-        if (controls_.pressed(ControlAction::RightRelease, input.pressed)) release_toy(1);
+        if (controls_.pressed(ControlAction::RightRelease, input.pressed) ||
+            human_gamepad_pressed(
+                input, computer_controlled_, 1, GamepadControl::A
+            )) {
+            release_toy(1);
+        }
     }
 
     for (int player = 0; player < 2; ++player) {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(GearheadsNative VERSION 1.1.1 LANGUAGES CXX RC)
+project(GearheadsNative VERSION 1.1.2 LANGUAGES CXX RC)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -29,6 +29,7 @@ set_source_files_properties("${EMBEDDED_RESOURCE_FILE}" PROPERTIES GENERATED TRU
 add_executable(gearheads WIN32
     "${EMBEDDED_RESOURCE_FILE}"
     src/main.cpp
+    src/xinput_input.cpp
     src/audio.cpp
     src/embedded_assets.cpp
     src/render.cpp
@@ -317,6 +318,14 @@ if(BUILD_TESTING)
         NAME controls
         COMMAND controls_test "${CMAKE_BINARY_DIR}/controls-test"
     )
+    add_executable(xinput_input_test
+        tests/xinput_input_test.cpp
+        src/xinput_input.cpp
+    )
+    target_compile_features(xinput_input_test PRIVATE cxx_std_20)
+    target_compile_definitions(xinput_input_test PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_include_directories(xinput_input_test PRIVATE src)
+    add_test(NAME xinput_input COMMAND xinput_input_test)
     add_executable(hud_layout_test
         tests/hud_layout_test.cpp
         src/hud_layout.cpp

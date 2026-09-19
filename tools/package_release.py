@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 
-ZIP_TIME = (2026, 8, 30, 12, 0, 0)
+ZIP_TIME = (2026, 9, 19, 12, 0, 0)
 
 
 def sha256(path: Path) -> str:

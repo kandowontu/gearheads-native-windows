@@ -13,6 +13,7 @@
 #include "controls.hpp"
 #include "launch_timing.hpp"
 #include "computer_ai.hpp"
+#include "input.hpp"
 
 #include <array>
 #include <cstdint>
@@ -36,11 +37,6 @@ enum class DuelMode {
     HumanVsHuman,
     Tournament,
     Attract,
-};
-
-struct InputState {
-    std::array<bool, 256> pressed{};
-    std::array<bool, 256> held{};
 };
 
 struct ToyDefinition {

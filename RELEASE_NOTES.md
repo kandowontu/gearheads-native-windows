@@ -1,49 +1,46 @@
-# Gearheads Native Windows Port 1.1.1
+# Gearheads Native Windows Port 1.1.2
 
-Release date: 2026-08-30
+Release date: 2026-09-19
 
-Version 1.1.1 is a disassembly-backed gameplay-parity update. It corrects
-sprite anchoring, collision geometry, erratic-toy timing, long-frame handling,
-and the original scoreless-match deadline while preserving the configurable
-controls, cheat menu, selected-toy HUD, audio repairs, and self-contained
-runtime introduced in earlier releases.
+Version 1.1.2 adds native XInput controller support to menus and gameplay. It
+retains the disassembly-backed sprite geometry, timing, match rules,
+configurable keyboard controls, cheat menu, selected-toy HUD, audio repairs,
+and self-contained runtime from version 1.1.1.
 
-## Rendering and collision parity
+## XInput controllers
 
-- Anchored gameplay toys, powerups, and obstacles with every frame's recovered
-  signed XR origin instead of geometrically centering each bitmap.
-- Rebuilt forward and mirrored collision rectangles from the same origin
-  anchor used for drawing.
-- Reproduced the original `(width-1)`/`(height-1)` extents and Win16
-  `MulDiv` rounding.
-- Kept the toybox preview bitmap-centered, matching its separate original
-  rendering path.
+- Added hot-plug polling for up to four XInput devices and active gameplay
+  support for the first two connected controllers.
+- Added D-pad and left-stick navigation for menus, lanes, and toy selection.
+- Added LB/RB as alternate previous/next toy controls.
+- Added A for menu confirmation and toy release, Start for menu confirmation,
+  and B or Back for returning from menus and leaving a duel.
+- Assigned controllers to human-controlled sides from left to right. Controller
+  1 therefore controls the right-side human in one-player games; controllers 1
+  and 2 control the left and right sides in two-player games.
+- Used edge-triggered button and stick input so held controls do not repeat
+  releases or skip multiple menu entries.
+- Suspended controller polling while the game is unfocused to prevent
+  background input.
 
-## Timing and match-rule parity
+## Integration and compatibility
 
-- Restored the original 550 ms maximum elapsed-frame step.
-- Changed erratic toys from a guaranteed turn every ten ticks to the recovered
-  independent `Random()%10 == 0` check on every simulation tick.
-- Restored the 300-second scoreless-match deadline and reset it after scoring.
-- On deadline expiry, remove arrows, cracks, teleporters, glue, rocks, bugs,
-  blocks, and walls while deliberately retaining mud and oil.
-- Raise scores below 19 to 19 so the original 21-point, win-by-two finish
-  proceeds as sudden death.
-
-## Cheat menu
-
-- Added Infinite Match Clock, which disables the restored scoreless-match
-  deadline for the current session.
-- Retained live ON/OFF state, Reset All Cheats, and default-off startup
-  behavior.
+- Kept configurable keyboard bindings fully independent from the fixed
+  controller layout.
+- Added the controller layout to the in-game Controls screen, README, and
+  packaged instructions.
+- Loaded `xinput1_4.dll`, `xinput1_3.dll`, or `xinput9_1_0.dll`
+  dynamically from the Windows system directory. The game still starts when
+  no controller or XInput runtime is available and gains no new redistributable
+  dependency.
 
 ## Packaging and verification
 
 - The release remains one self-contained 64-bit `Gearheads.exe`; it requires
   no original CD, VHD, installer, executable, DLL, archive, or adjacent assets.
-- Expanded the automated suite from 29 to 30 tests with exact sprite-origin,
-  mirrored collision, sudden-death, erratic-timing, and cheat coverage.
-- Revalidated embedded assets, sound references and loops, configurable
-  controls, fullscreen toggling, and the native PE import table.
+- Expanded the automated suite from 30 to 31 tests with controller mapping,
+  analog dead-zone, edge-detection, and player-assignment coverage.
+- Revalidated embedded assets, sound references and loops, keyboard controls,
+  fullscreen toggling, and the native PE import table.
 - The executable is unsigned. Verify it with the supplied SHA-256 values before
   bypassing any SmartScreen warning.

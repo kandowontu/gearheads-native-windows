@@ -1,5 +1,6 @@
 #include "embedded_assets.hpp"
 #include "game.hpp"
+#include "xinput_input.hpp"
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -15,6 +16,8 @@ struct Runtime {
     gh::Canvas canvas;
     gh::Game game;
     gh::InputState input;
+    gh::XInputInput xinput;
+    bool active = true;
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
 
     Runtime(const std::filesystem::path& assets, HWND window) : game(assets, window) {}
@@ -99,6 +102,15 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
         case MM_MCINOTIFY:
             if (runtime != nullptr) runtime->game.handle_mci_notify(wparam, lparam);
             return 0;
+        case WM_ACTIVATEAPP:
+            if (runtime != nullptr) {
+                runtime->active = wparam != FALSE;
+                if (!runtime->active) {
+                    runtime->input.pressed.fill(false);
+                    runtime->input.held.fill(false);
+                }
+            }
+            return 0;
         case WM_KEYUP:
         case WM_SYSKEYUP:
             if (runtime != nullptr && wparam < runtime->input.held.size()) {
@@ -158,7 +170,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show_command) {
         HWND window = CreateWindowExW(
             0,
             window_class.lpszClassName,
-            L"Gearheads - Native Windows Port 1.1.1",
+            L"Gearheads - Native Windows Port 1.1.2",
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
@@ -196,6 +208,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show_command) {
                 continue;
             }
             runtime->previous = now;
+            runtime->xinput.poll(runtime->input, runtime->active);
             runtime->game.update(seconds, runtime->input);
             runtime->game.render(runtime->canvas);
             runtime->input.pressed.fill(false);

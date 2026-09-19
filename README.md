@@ -1,7 +1,7 @@
-# Gearheads Native Windows Port 1.1.1
+# Gearheads Native Windows Port 1.1.2
 
 Gearheads Native is a preservation-oriented, native Windows reimplementation
-of the 1996 toy-battle game. Version 1.1.1 runs without the original CD, disk
+of the 1996 toy-battle game. Version 1.1.2 runs without the original CD, disk
 image, installer, executable, DLLs, or separately supplied game assets.
 
 The release is a single 64-bit `Gearheads.exe`. Its verified converted runtime
@@ -13,7 +13,7 @@ recreated from the EXE. Champion-table updates are stored separately under
 
 ## Download and run
 
-1. Extract the v1.1.1 release ZIP, or copy `Gearheads.exe` by itself.
+1. Extract the v1.1.2 release ZIP, or copy `Gearheads.exe` by itself.
 2. Run `Gearheads.exe`. No installation or compatibility mode is required.
 3. If Windows SmartScreen warns about the unsigned executable, inspect its
    SHA-256 value against `SHA256SUMS.txt` before choosing to run it.
@@ -32,6 +32,12 @@ not prevent the game from running.
 - Right player, and the human in one-player games: Up/Down selects a lane,
   Left/Right selects a toy, and Enter or Space releases it.
 - Left player: W/S selects a lane, A/D selects a toy, and F releases it.
+- XInput controllers: D-pad or left stick selects lanes and toys, LB/RB also
+  selects toys, A releases or confirms, and B or Back returns. Start also
+  confirms menus.
+- Controllers are assigned to human-controlled sides from left to right. In a
+  one-player game, controller 1 controls the right-side human; in a two-player
+  duel, controllers 1 and 2 control the left and right sides respectively.
 - Escape leaves a duel. Any key leaves an attract-mode demonstration.
 - Alt+Enter toggles borderless fullscreen. The original 4:3 picture is scaled
   with black letterboxing rather than distorted.
@@ -40,7 +46,8 @@ not prevent the game from running.
 - The main menu now has a dedicated Controls screen containing the complete
   native keyboard layout. Select any gameplay action and press a replacement
   key to rebind it; conflicting assignments are swapped, defaults can be
-  restored, and custom controls are saved between launches.
+  restored, and custom controls are saved between launches. The fixed XInput
+  layout is shown on the same screen.
 
 ## Cheat menu
 
@@ -64,7 +71,7 @@ menu. Its toggles are disabled on every fresh launch:
 Reset All Cheats turns every option off. Leaving the cheat screen does not
 reset its toggles, but quitting the executable does.
 
-## What version 1.1.1 preserves
+## What version 1.1.2 preserves
 
 The native engine reads all 35 recovered screen sections plus the native
 Controls and cheat screens, 105 level sections, 34 object scripts, 51
@@ -120,13 +127,13 @@ The build creates `dist\Gearheads.exe`. `tools\build_embedded_assets.py`
 deterministically packs the converted `assets` tree into the PE resource; the
 finished EXE does not search for an adjacent asset folder.
 
-To produce the local v1.1.1 package:
+To produce the local v1.1.2 package:
 
 ```powershell
 python tools\package_release.py `
   --exe dist\Gearheads.exe `
   --output release `
-  --version 1.1.1
+  --version 1.1.2
 ```
 
 ## Preservation and reverse engineering
@@ -177,7 +184,7 @@ flicker.
 ## Credits and status
 
 See [CREDITS.md](CREDITS.md) for the complete recovered original staff list and
-native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.1.1
+native-port acknowledgements, [RELEASE_NOTES.md](RELEASE_NOTES.md) for v1.1.2
 details, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for provenance and
 rights information.
 
